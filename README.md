@@ -65,7 +65,12 @@ python -m qorvex settings            # print config path
 - **Windows:** run `build.bat` → `dist\qorvex.exe`. Double-click it: Qorvex opens as a desktop
   window. Use `qorvex.exe serve --no-window` for browser-only mode, and `--no-open` to start
   without opening anything (used by autostart).
-- **Linux / macOS:** run `./build.sh` → `dist/qorvex`.
+- **Linux:** run `./build.sh` → `dist/qorvex` (single file). The desktop window uses Qt via
+  `pywebview[qt]` (installed by build.sh automatically) or GTK webkit if present — otherwise it
+  falls back to the browser UI. A `qorvex.desktop` menu entry is included.
+- **macOS:** run `./build.sh` with `--onedir` replaced in mind → `dist/qorvex.app`; CI produces
+  the proper `.app` bundle automatically. The desktop window uses the native WKWebView. Gatekeeper
+  will ask to confirm apps from an unnotarized developer — right-click → Open.
 - **No build tools?** Push this folder to GitHub, run the **Build Qorvex** workflow
   (Actions tab) and download the Windows/Linux/macOS artifacts. The workflow also runs the tests
   and builds both browser extensions.
@@ -239,6 +244,8 @@ CI runs the whole suite on Windows and Linux.
   not apply per-interface, and torrent jobs are not persisted across restarts (finished files are).
 - `ffmpeg` is required for merged media; without it video and audio are kept as separate files.
 - macOS builds are produced by CI but were not run here.
+- Linux desktop window needs Qt (`pip install "pywebview[qt]"`) or GTK webkit; the browser UI works
+  everywhere without any of that.
 
 ## Layout
 

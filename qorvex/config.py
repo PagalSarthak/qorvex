@@ -9,12 +9,21 @@ import copy
 import json
 import os
 import secrets
+import sys
 import tempfile
 import threading
 from typing import Any
 
 APP_NAME = "Qorvex"
-DEFAULT_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Qorvex/1.0"
+def _default_ua() -> str:
+    platform = {
+        "win32": "Windows NT 10.0; Win64; x64",
+        "darwin": "Macintosh; Intel Mac OS X 10_15_7",
+    }.get(sys.platform, "X11; Linux x86_64")
+    return f"Mozilla/5.0 ({platform}) Qorvex/1.0"
+
+
+DEFAULT_UA = _default_ua()
 
 
 def app_dir() -> str:

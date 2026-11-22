@@ -1,5 +1,5 @@
 # Push this project to GitHub, open Actions > "Build Qorvex" > Run workflow.
-# Download the Windows .exe, Linux and macOS binaries from the run's Artifacts.
+# Download the Windows .exe, the macOS .app and the Linux binary from the run's Artifacts.
 name: Build Qorvex
 on: [workflow_dispatch, push]
 jobs:
@@ -8,15 +8,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: windows-latest, sep: ";", name: qorvex-windows, bin: dist/qorvex.exe, test: true,  extra: "--windowed --icon qorvex.ico --collect-all pythonnet --collect-all clr_loader" }
-          - { os: ubuntu-22.04,   sep: ":", name: qorvex-linux,   bin: dist/qorvex,     test: true,  extra: "--windowed" }
-          - { os: macos-latest,   sep: ":", name: qorvex-macos,   bin: dist/qorvex,     test: false, extra: "--windowed" }
+          - { os: windows-latest, sep: ";", name: qorvex-windows, bin: dist/qorvex.exe, test: true,  webview: "pywebview",    extra: "--onefile --windowed --icon qorvex.ico --collect-all pythonnet --collect-all clr_loader" }
+          - { os: ubuntu-22.04,   sep: ":", name: qorvex-linux,   bin: dist/qorvex,     test: true,  webview: "pywebview[qt]", extra: "--onefile --windowed" }
+          - { os: macos-latest,   sep: ":", name: qorvex-macos,   bin: dist/qorvex.app, test: false, webview: "pywebview",    extra: "--onedir --windowed" }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: pip install pyinstaller pytest psutil pywebview "yt-dlp[default]"
+      - run: pip install pyinstaller pytest psutil "${{ matrix.webview }}" "yt-dlp[default]"
       - run: pip install libtorrent || echo "libtorrent unavailable: building without torrents"
       - name: Tests
         if: matrix.test
@@ -25,7 +25,7 @@ jobs:
         run: python tools/build_extension.py
       - name: Build executable
         run: >
-          pyinstaller --onefile --clean --name qorvex ${{ matrix.extra }}
+          pyinstaller --clean --name qorvex ${{ matrix.extra }}
           --add-data "qorvex/ui.html${{ matrix.sep }}qorvex"
           --add-data "qorvex/logo.png${{ matrix.sep }}qorvex"
           --add-data "extension${{ matrix.sep }}extension"
