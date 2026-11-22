@@ -1,0 +1,816 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Qorvex</title>
+<link rel="icon" type="image/png" href="/logo.png">
+<style>
+/* ─── Qorvex dashboard ───────────────────────────────────────────────
+   Palette comes from the logo: near-black surfaces, one violet accent.
+   Boxes are kept to a minimum; grouping is done with whitespace and
+   hairlines. Statuses are dots, numbers are tabular. */
+:root{
+  --bg:#06070b;--bg2:#0c0e14;--card:#0f1118;--card2:#14161f;--line:#212330;
+  --line2:#2c2e3d;
+  --tx:#edeaf4;--mu:#83869a;--faint:#5b5e70;
+  --ac:#7c3aed;--ac2:#b3a1ff;--ac3:#8b5cf6;
+  --ok:#34d399;--warn:#fbbf24;--bad:#f87171;
+  --radius:10px;--shadow:0 16px 40px #0009;color-scheme:dark;
+}
+@media (prefers-color-scheme:light){
+  :root{--bg:#f6f6fa;--bg2:#ededf4;--card:#fff;--card2:#f7f7fc;--line:#e6e5f0;--line2:#d8d7e6;
+        --tx:#191821;--mu:#6a6d80;--faint:#9b9eb0;--ac:#6d28d9;--ac2:#6d28d9;--shadow:0 16px 40px #0002;color-scheme:light}
+}
+html[data-theme="dark"]{--bg:#06070b;--bg2:#0c0e14;--card:#0f1118;--card2:#14161f;--line:#212330;--line2:#2c2e3d;--tx:#edeaf4;--mu:#83869a;--faint:#5b5e70;--ac:#7c3aed;--ac2:#b3a1ff;--ac3:#8b5cf6;color-scheme:dark}
+html[data-theme="light"]{--bg:#f6f6fa;--bg2:#ededf4;--card:#fff;--card2:#f7f7fc;--line:#e6e5f0;--line2:#d8d7e6;--tx:#191821;--mu:#6a6d80;--faint:#9b9eb0;--ac:#6d28d9;--ac2:#6d28d9;--ac3:#7c3aed;color-scheme:light}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:radial-gradient(1000px 420px at 10% -6%,#7c3aed17,transparent),var(--bg);
+     color:var(--tx);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--ac2)}
+::selection{background:#7c3aed55}
+main{max-width:1000px;margin:0 auto;padding:24px 20px 90px}
+
+/* ─── header ─── */
+header{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin:2px 0 8px}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-tile{width:42px;height:42px;border-radius:10px;background:#000;display:flex;align-items:center;justify-content:center;
+           flex:none;box-shadow:0 0 0 1px #ffffff12,0 0 24px #8b5cf638;overflow:hidden}
+.logo-tile img{width:35px;height:35px;object-fit:contain;display:block}
+.wordmark{font-size:20px;font-weight:800;letter-spacing:.2px;display:inline-flex;align-items:center}
+.wordmark b{color:var(--ac2);font-weight:800}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px 1px #34d39945;display:inline-block;margin-left:8px}
+.tag{color:var(--faint);font-size:12px}
+.spacer{flex:1}
+.stat{display:flex;gap:0;margin-right:8px}
+.stat span{display:flex;flex-direction:column;gap:1px;padding:0 20px;line-height:1.2}
+.stat span + span{border-left:1px solid var(--line)}
+.stat b{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+.stat i{font-style:normal;font-size:10px;text-transform:uppercase;letter-spacing:1.1px;color:var(--mu)}
+
+/* ─── buttons ─── */
+.btn{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid var(--line);
+     border-radius:8px;padding:7px 11px;transition:border-color .15s,background .15s,color .15s}
+.btn svg{flex:none;opacity:.75}
+.btn:hover{border-color:var(--line2);background:var(--card2)}
+.btn:focus-visible{outline:2px solid var(--ac3);outline-offset:2px}
+.btn.primary{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:600}
+.btn.primary:hover{background:var(--ac3);border-color:var(--ac3)}
+.btn.ghost{border-color:transparent}
+.btn.ghost:hover{border-color:var(--line2)}
+.btn.sm{padding:4px 9px;font-size:12px;border-radius:7px}
+.btn.danger:hover{border-color:#8f3a3a;color:#ff9a9a}
+
+/* ─── sections ─── */
+section{margin-bottom:30px}
+h2{font-size:11px;text-transform:uppercase;letter-spacing:1.3px;color:var(--mu);margin:0 0 10px 1px;font-weight:600}
+h2 .hint{text-transform:none;letter-spacing:0;font-size:12px;margin-left:6px}
+.hint{color:var(--mu);font-size:12px}
+
+/* ─── clipboard banner ─── */
+.banner{display:flex;gap:10px;align-items:center;border:1px solid #7c3aed50;border-left:3px solid var(--ac3);
+        border-radius:8px;padding:9px 12px;margin:0 0 26px;background:linear-gradient(90deg,#7c3aed12,transparent)}
+.banner svg{color:var(--ac2);flex:none}
+.banner code{background:var(--bg2);padding:2px 7px;border-radius:5px;font-size:12px;overflow:hidden;
+             text-overflow:ellipsis;white-space:nowrap;max-width:52vw}
+.exthint{display:flex;gap:12px;align-items:flex-start;background:linear-gradient(135deg,rgba(124,58,237,.14),rgba(124,58,237,.05));
+             border:1px solid rgba(124,58,237,.35);border-radius:12px;padding:12px 14px;margin:0 0 14px;color:var(--fg)}
+.exthint svg{color:var(--ac2);flex:none;margin-top:2px}
+.exthint-text{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0;font-size:13px}
+.exthint-text b{font-size:13.5px;font-weight:600}
+.exthint-text span{color:var(--mut);font-size:12.5px}
+.exthint-steps{margin-top:6px;display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--fg)}
+.exthint-steps code{background:var(--bg2);padding:2px 7px;border-radius:5px;font-size:12px}
+.exthint-steps b{font-weight:600}
+.extrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:7px}
+.linkbtn{text-decoration:underline;text-underline-offset:3px;padding:2px 0;color:var(--mut)}
+.linkbtn:hover{color:var(--fg)}
+.banner.hold{align-items:flex-start}
+.holdlist{flex:1;display:flex;flex-direction:column;min-width:0}
+.holdrow{display:flex;gap:10px;align-items:center;padding:4px 0;min-width:0}
+.holdrow + .holdrow{border-top:1px solid var(--line)}
+.holdrow .what{flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.holdrow .what b{color:var(--ac2);font-weight:600}
+.holdrow code{background:var(--bg2);padding:2px 7px;border-radius:5px;font-size:12px}
+
+/* ─── add panel ─── */
+#addPanel{padding:14px}
+#addPanel textarea{width:100%;min-height:84px;resize:vertical;background:var(--bg2);border:1px solid var(--line);
+                   border-radius:8px;padding:10px 12px;outline:none;transition:border-color .15s}
+#addPanel textarea:focus{border-color:var(--ac3)}
+.addrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+#addPanel.drop{outline:2px dashed var(--ac3);outline-offset:3px}
+select,input[type=text],input[type=number],input[type=password]{background:var(--bg2);border:1px solid var(--line);
+        border-radius:8px;padding:7px 9px;outline:none;transition:border-color .15s}
+select:focus,input:focus{border-color:var(--ac3)}
+
+/* ─── networks: slim rows, not tiles ─── */
+.nets{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--radius);
+      background:var(--card);overflow:visible}
+.net{position:relative;display:grid;grid-template-columns:auto auto 1fr auto;gap:2px 14px;align-items:baseline;
+     padding:11px 14px;border-bottom:1px solid var(--line)}
+.net:last-child{border-bottom:0}
+.net:hover{background:var(--card2)}
+.net > .switch{grid-column:1;grid-row:1/3;align-self:center}
+.net .nm{grid-column:2;grid-row:1;display:inline-flex;align-items:center;gap:8px;font-weight:650;font-size:13.5px;
+         max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.net .nm i{width:8px;height:8px;border-radius:3px;background:var(--c,var(--ac3));flex:none}
+.net .ip{grid-column:3;grid-row:1;color:var(--faint);font-size:12px;font-variant-numeric:tabular-nums;
+         overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.net .sp{grid-column:4;grid-row:1/3;align-self:center;font-size:17px;font-weight:700;
+         font-variant-numeric:tabular-nums;min-width:86px;text-align:right}
+.net .lim{grid-column:2/4;grid-row:2;display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--mu)}
+.net .lim input{width:64px;padding:3px 6px;font-size:11.5px}
+.net .hint{grid-column:2/4;grid-row:3;font-size:11px;color:var(--faint)}
+.net .x{position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:0;transition:.15s;
+        background:none;border:0;color:var(--mu);font-size:13px;padding:4px 6px}
+.net:hover .x{opacity:1}
+.net .x:hover{color:var(--bad)}
+.net.off{opacity:.5}
+.net.add{display:flex;align-items:center;justify-content:center;height:52px;background:none;border:0;
+         border-top:1px dashed var(--line2);border-radius:0 0 var(--radius) var(--radius);
+         color:var(--mu);font-size:12.5px;transition:.15s}
+.net.add:hover{color:var(--ac2);background:var(--card2)}
+
+/* ─── downloads: borderless list with hairlines ─── */
+.listhead{border-bottom:1px solid var(--line);margin-bottom:2px}
+.listhead h2{margin:0 0 8px}
+.tabs{display:flex;gap:18px;margin-bottom:6px}
+.tab{background:none;border:0;padding:4px 1px;color:var(--mu);font-size:12.5px;border-bottom:2px solid transparent;
+     margin-bottom:-7px;transition:.15s}
+.tab:hover{color:var(--tx)}
+.tab.on{color:var(--tx);border-bottom-color:var(--ac3)}
+.dl{display:grid;grid-template-columns:1fr auto;gap:6px 16px;align-items:center;padding:12px 2px;
+    border-bottom:1px solid var(--line);transition:background .12s}
+.dl:hover{background:var(--card2)}
+.dl .name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dl .meta{color:var(--mu);font-size:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:2px;
+          font-variant-numeric:tabular-nums}
+.bar{grid-column:1/-1;height:4px;border-radius:99px;background:var(--bg2);overflow:hidden;position:relative}
+.bar i{display:block;height:100%;background:var(--ac3);border-radius:99px;transition:width .35s}
+.bar.indet i{width:30%!important;animation:slide 1.2s infinite ease-in-out}
+@keyframes slide{0%{margin-left:-30%}100%{margin-left:100%}}
+.chips{grid-column:1/-1;display:flex;gap:5px;flex-wrap:wrap}
+.chip{font-size:10.5px;padding:2px 7px;border-radius:99px;background:var(--card2);border:1px solid var(--line);
+      color:var(--mu);font-variant-numeric:tabular-nums}
+.chip.down{border-color:#7a3030;color:#ff9a9a}
+
+.dl.st-done .bar i,.dl.st-error .bar i,.dl.st-cancelled .bar i{background:var(--line2)}
+
+/* statuses: a dot and a word, no pills */
+.st{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--mu);white-space:nowrap}
+.st::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+.st.downloading,.st.merging,.st.resolving{color:var(--ac2)}
+.st.done{color:#5eead4}
+.st.seeding{color:#7dd3fc}
+.st.error{color:var(--bad);font-weight:600}
+.st.paused,.st.pausing,.st.queued{color:var(--warn)}
+
+.acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.empty{padding:44px 16px;text-align:center;color:var(--mu)}
+.empty b{display:block;color:var(--tx);margin-bottom:5px;font-size:14px}
+
+/* ─── dialogs ─── */
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--tx);padding:0;
+       width:min(760px,94vw);max-height:88vh;box-shadow:var(--shadow)}
+dialog::backdrop{background:#000b;backdrop-filter:blur(3px)}
+.dlg{display:flex;flex-direction:column;max-height:88vh}
+.dlg header{margin:0;padding:14px 18px;border-bottom:1px solid var(--line);gap:10px}
+.dlg header h3{margin:0;font-size:15px;font-weight:700}
+.dlg .body{padding:16px 18px;overflow:auto}
+.dlg footer{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center}
+.grp{margin-bottom:22px}
+.grp h4{margin:0 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:1.1px;color:var(--mu);font-weight:600}
+.field{display:grid;grid-template-columns:1fr 260px;gap:10px 16px;align-items:center;padding:8px 0;
+       border-bottom:1px solid var(--line)}
+.field:last-child{border-bottom:0}
+.field .lb{font-size:13px}
+.field .hp{font-size:11.5px;color:var(--mu);margin-top:2px;max-width:46ch}
+.field input[type=text],.field input[type=number],.field input[type=password],.field select{width:100%}
+.field .check{justify-self:start}
+.field.bool{grid-template-columns:1fr auto}
+.switch{position:relative;width:38px;height:21px;display:inline-block;flex:none}
+.switch input{opacity:0;width:0;height:0}
+.switch i{position:absolute;inset:0;background:#33363f;border-radius:99px;transition:.15s}
+html[data-theme="light"] .switch i{background:#d6d5e2}
+.switch i:after{content:"";position:absolute;width:15px;height:15px;border-radius:50%;background:#fff;top:3px;left:3px;
+                transition:.15s;box-shadow:0 1px 3px #0006}
+.switch input:checked+i{background:var(--ac)}
+.switch input:checked+i:after{transform:translateX(17px)}
+.rowline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+
+/* ─── toast ─── */
+#toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:#15161f;
+       border:1px solid var(--line2);color:var(--tx);padding:9px 15px;border-radius:9px;opacity:0;
+       pointer-events:none;transition:.2s;box-shadow:var(--shadow);z-index:50;max-width:80vw;font-size:13px}
+html[data-theme="light"] #toast{background:#fff}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#toast.bad{border-color:#8f3a3a}
+pre.log{white-space:pre-wrap;font-size:11.5px;line-height:1.55;margin:0;color:var(--mu)}
+kbd{background:var(--card2);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;
+    padding:1px 5px;font-size:11px}
+
+@media(max-width:620px){
+  main{padding:16px 12px 70px}
+  .stat span{padding:0 12px}
+  .field{grid-template-columns:1fr}
+  .dl{grid-template-columns:1fr}
+  .acts{justify-content:flex-start}
+  .net{grid-template-columns:auto 1fr auto;gap:2px 10px}
+  .net .nm{grid-column:2;grid-row:1}
+  .net .ip{grid-column:2;grid-row:2}
+  .net .sp{grid-column:3;grid-row:1;font-size:15px}
+  .net .lim{grid-column:2;grid-row:3}
+  .net .hint{grid-column:3;grid-row:3;text-align:right}
+  .net .x{right:6px}
+  .net .sp{min-width:0}
+  .net .lim input{width:56px}
+  .net .hint{font-size:10.5px}
+  .banner code{max-width:40vw}
+}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="logo">
+      <span class="logo-tile"><img src="/logo.png" alt="Qorvex logo"></span>
+      <span class="wordmark">Qor<b>vex</b><span class="dot" id="dot" title="server status"></span></span>
+      <span class="tag" id="ver"></span>
+    </div>
+    <div class="spacer"></div>
+    <div class="stat">
+      <span><b id="hsp">0 B/s</b><i>Speed</i></span>
+      <span><b id="hact">0</b><i>Active</i></span>
+      <span><b id="hdone">0</b><i>Done</i></span>
+    </div>
+    <button class="btn sm" id="openDir" title="Open the download folder">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      Folder
+    </button>
+    <button class="btn sm" id="settingsBtn" title="Settings">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </button>
+  </header>
+
+  <div id="exthint" class="exthint" hidden>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m7.8 16.2-2.9 2.9"/><path d="M6 12H2"/><path d="m7.8 7.8-2.9-2.9"/></svg>
+    <div class="exthint-text">
+      <b>Catch downloads from your browser</b>
+      <span>One click opens your browser at the right setup page with the extension folder path already copied.</span>
+      <div class="extrow" id="extBtns"></div>
+      <div class="exthint-steps" id="extSteps" hidden>
+        <div><b>Chrome / Edge / Brave:</b> on the <code>chrome://extensions</code> page turn on <b>Developer mode</b>, click <b>Load unpacked</b>, then press <b>Ctrl+V</b> in the file dialog and confirm — the copied path selects the extension.</div>
+        <div><b>Firefox:</b> on the <code>about:debugging</code> page click <b>Load Temporary Add-on…</b> and pick <code>manifest.json</code> from the <code>firefox</code> folder that just opened.</div>
+      </div>
+      <button class="btn sm ghost linkbtn" id="extHow">Manual steps</button>
+    </div>
+    <button class="btn sm ghost" id="extNo" title="Don't show again">✕</button>
+  </div>
+
+  <div id="clip" class="banner hold" hidden>
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+    <div class="holdlist" id="clipRows"></div>
+  </div>
+
+  <section>
+    <h2>Add downloads</h2>
+    <div class="card" id="addPanel">
+      <textarea id="urls" placeholder="Paste one or more http(s) links — one per line.&#10;YouTube/Vimeo page links work too (tick “video page”).&#10;magnet: links and .torrent URLs are picked up automatically."></textarea>
+      <div class="addrow">
+        <label class="rowline hint"><input type="checkbox" id="media"> video page (yt-dlp)</label>
+        <select id="quality" title="Quality for video pages">
+          <option value="best">Best quality</option>
+          <option value="1080">1080p</option>
+          <option value="720">720p</option>
+          <option value="480">480p</option>
+          <option value="360">360p</option>
+          <option value="audio">Audio only</option>
+        </select>
+        <input type="text" id="addDir" placeholder="folder (optional)" style="flex:1;min-width:160px">
+        <button class="btn primary" id="addBtn">Add</button>
+        <button class="btn sm ghost" id="torrentBtn" title="Pick one or more .torrent files">+ .torrent file</button>
+        <input type="file" id="torrentFile" accept=".torrent,application/x-bittorrent" hidden multiple>
+        <span class="hint">or copy a link — or drag &amp; drop a .torrent file anywhere</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Networks <span class="hint" id="netHint"></span></h2>
+    <div class="nets" id="nets"></div>
+  </section>
+
+  <section>
+    <div class="rowline listhead" style="justify-content:space-between">
+      <h2 style="margin:0">Downloads</h2>
+      <div class="tabs" id="tabs">
+        <button class="tab on" data-f="all">All</button>
+        <button class="tab" data-f="active">Active</button>
+        <button class="tab" data-f="done">Finished</button>
+      </div>
+    </div>
+    <div id="list"></div>
+  </section>
+</main>
+
+<dialog id="settings">
+  <form method="dialog" class="dlg" id="settingsForm">
+    <header>
+      <h3>Settings</h3><div class="spacer"></div>
+      <button class="btn sm" value="close" formnovalidate>✕</button>
+    </header>
+    <div class="body" id="settingsBody"></div>
+    <footer>
+      <button class="btn sm danger" type="button" id="resetBtn">Reset defaults</button>
+      <span class="hint" id="saveMsg"></span>
+      <span class="spacer"></span>
+      <button class="btn sm" value="close" formnovalidate>Close</button>
+      <button class="btn sm primary" type="button" id="saveBtn">Save</button>
+    </footer>
+  </form>
+</dialog>
+
+<dialog id="logDlg">
+  <div class="dlg">
+    <header><h3>Log</h3><span class="spacer"></span><button class="btn sm" data-close="logDlg">✕</button></header>
+    <div class="body"><pre class="log" id="logBody">loading…</pre></div>
+  </div>
+</dialog>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const api = async (path, body) => {
+  const r = await fetch(path, body === undefined ? {} : {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || ("HTTP " + r.status));
+  return data;
+};
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = (n) => {
+  if (!n && n !== 0) return "—";
+  const u = ["B","KB","MB","GB","TB"]; let i = 0;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+  return (i ? n.toFixed(n < 10 ? 1 : 0) : n) + " " + u[i];
+};
+const spd = (n) => fmt(n) + "/s";
+const pct = (d) => d.size ? Math.min(100, (d.done / d.size) * 100) : (d.status === "done" ? 100 : 0);
+const eta = (s) => {
+  if (!s || s < 0) return "";
+  if (s < 60) return Math.round(s) + "s left";
+  if (s < 3600) return Math.round(s / 60) + "m left";
+  return (s / 3600).toFixed(1) + "h left";
+};
+let state = { downloads: [], networks: [], settings: {} };
+let filter = "all";
+let settingsSpec = null;
+
+function toast(msg, bad) {
+  const t = $("toast"); t.textContent = msg; t.className = "on" + (bad ? " bad" : "");
+  clearTimeout(toast._t); toast._t = setTimeout(() => { t.className = ""; }, 2600);
+}
+
+/* ---------------- networks ---------------- */
+const NET_COLORS = ["#a78bfa","#34d399","#fbbf24","#60a5fa","#f472b6","#c4b5fd","#2dd4bf","#fb923c"];
+let netSignature = "";
+function renderNets() {
+  const nets = state.networks || [];
+  const sig = nets.map(n => n.name + "|" + n.ip).join(",");
+  const host = $("nets");
+  if (sig !== netSignature) {
+    netSignature = sig;
+    host.innerHTML = nets.map((n, i) => `
+      <div class="net ${n.enabled ? "" : "off"}" data-net="${esc(n.name)}" style="--c:${NET_COLORS[i % NET_COLORS.length]}">
+        <label class="switch" title="Enable / disable">
+          <input type="checkbox" data-act="enablenet" ${n.enabled ? "checked" : ""}>
+          <i></i>
+        </label>
+        <span class="nm" title="${esc(n.name)}"><i></i>${esc(n.name)}</span>
+        <span class="ip" title="${esc(n.ip)}">${esc(n.ip || "default route")}</span>
+        <span class="sp" data-f="speed">0 B/s</span>
+        <span class="lim">Limit <input type="number" min="0" step="1" data-act="netlimit" value="${Math.round((n.limit || 0) / 1048576)}"> MB/s</span>
+        <span class="hint" data-f="total">0 B this session</span>
+        <button class="x" data-act="rmnet" title="Remove this manual network">✕</button>
+      </div>`).join("") || `<div class="empty">No interfaces detected — add one below.</div>`;
+    host.insertAdjacentHTML("beforeend", `
+      <button class="net add" id="addNet">＋ Add network</button>`);
+  }
+  for (const n of nets) {
+    const el = host.querySelector(`[data-net="${CSS.escape(n.name)}"]`);
+    if (!el) continue;
+    el.classList.toggle("off", !n.enabled);
+    el.querySelector('[data-f="speed"]').textContent = spd(n.speed);
+    el.querySelector('[data-f="total"]').textContent = fmt(n.total) + " this session";
+    const box = el.querySelector('[data-act="enablenet"]');
+    if (box !== document.activeElement) box.checked = n.enabled;
+    const lim = el.querySelector('[data-act="netlimit"]');
+    if (lim !== document.activeElement) lim.value = Math.round((n.limit || 0) / 1048576);
+  }
+  $("netHint").textContent = nets.length ? `${nets.filter(n => n.enabled).length}/${nets.length} enabled` : "";
+}
+
+$("nets").addEventListener("change", async (e) => {
+  const card = e.target.closest("[data-net]"); if (!card) return;
+  const name = card.dataset.net;
+  if (e.target.dataset.act === "enablenet") {
+    await api("/api/network", { name, enabled: e.target.checked }).catch(err => toast(err.message, true));
+  } else if (e.target.dataset.act === "netlimit") {
+    const mb = Math.max(0, Number(e.target.value) || 0);
+    await api("/api/network", { name, limit: Math.round(mb * 1048576) }).catch(err => toast(err.message, true));
+    toast(mb ? `Limit for ${name}: ${mb} MB/s` : `Limit removed for ${name}`);
+  }
+});
+$("nets").addEventListener("click", async (e) => {
+  if (e.target.id === "addNet") {
+    const spec = prompt("Add a network as NAME=IP (for example: wifi=192.168.1.50)");
+    if (!spec) return;
+    try { await api("/api/networks/add", { spec }); toast("Network added"); poll(); }
+    catch (err) { toast(err.message, true); }
+    return;
+  }
+  if (e.target.dataset.act === "rmnet") {
+    const name = e.target.closest("[data-net]").dataset.net;
+    if (!confirm(`Remove network ${name}?`)) return;
+    try { await api("/api/networks/remove", { name }); toast("Network removed"); poll(); }
+    catch (err) { toast(err.message, true); }
+  }
+});
+
+/* ---------------- downloads ---------------- */
+const ACTIVE = new Set(["starting","downloading","pausing","merging","resolving","seeding"]);
+function buttons(d) {
+  const b = [];
+  const id = esc(d.id);
+  if (d.status === "downloading" || d.status === "queued" || d.status === "starting") {
+    b.push(`<button class="btn sm" data-id="${id}" data-act="pause">Pause</button>`);
+    b.push(`<button class="btn sm danger" data-id="${id}" data-act="cancel">Cancel</button>`);
+  } else if (d.status === "paused" || d.status === "pausing") {
+    b.push(`<button class="btn sm" data-id="${id}" data-act="resume">Resume</button>`);
+    b.push(`<button class="btn sm danger" data-id="${id}" data-act="cancel">Cancel</button>`);
+  } else if (d.status === "error" || d.status === "cancelled") {
+    b.push(`<button class="btn sm" data-id="${id}" data-act="retry">Retry</button>`);
+    b.push(`<button class="btn sm" data-id="${id}" data-act="remove">Remove</button>`);
+  } else if (d.status === "done") {
+    if (d.path) {
+      b.push(`<button class="btn sm" data-id="${id}" data-act="open" data-path="${esc(d.path)}">Open</button>`);
+      b.push(`<button class="btn sm" data-id="${id}" data-act="reveal" data-path="${esc(d.path)}">Show</button>`);
+    }
+    b.push(`<button class="btn sm" data-id="${id}" data-act="remove">Clear</button>`);
+    b.push(`<button class="btn sm danger" data-id="${id}" data-act="delete">Delete</button>`);
+  } else if (d.status === "seeding") {
+    if (d.path) {
+      b.push(`<button class="btn sm" data-id="${id}" data-act="open" data-path="${esc(d.path)}">Open</button>`);
+      b.push(`<button class="btn sm" data-id="${id}" data-act="reveal" data-path="${esc(d.path)}">Show</button>`);
+    }
+    b.push(`<button class="btn sm" data-id="${id}" data-act="pause">Stop seeding</button>`);
+    b.push(`<button class="btn sm danger" data-id="${id}" data-act="delete">Delete</button>`);
+  } else if (d.status === "resolving" || d.status === "merging") {
+    b.push(`<button class="btn sm danger" data-id="${id}" data-act="cancel">Cancel</button>`);
+  }
+  return b.join("");
+}
+function row(d) {
+  const chips = Object.entries(d.nets || {}).map(([k, v]) =>
+    `<span class="chip ${(d.down || []).includes(k) ? "down" : ""}" title="${esc(k)}">${esc(k)} ${fmt(v)}</span>`).join("");
+  const p = pct(d);
+  const indet = ["resolving","merging","starting"].includes(d.status);
+  const meta = [
+    `<span class="st ${esc(d.status)}">${esc(d.status)}</span>`,
+    d.size ? `${fmt(d.done)} / ${fmt(d.size)}` : fmt(d.done),
+    d.status === "downloading" || d.status === "seeding" ? spd(d.speed) : "",
+    d.status === "downloading" ? eta(d.eta) : "",
+    d.connections ? d.connections + " conn" : "",
+    d.seeds ? d.seeds + " seeds" : "",
+    d.category ? esc(d.category) : "",
+    d.error ? `<span style="color:#ff9a9a">${esc(d.error)}</span>` : "",
+  ].filter(Boolean).join(" · ");
+  return `<div class="dl st-${esc(d.status)}" data-dl="${esc(d.id)}">
+    <div>
+      <div class="name" title="${esc(d.path || d.url)}">${esc(d.name)}</div>
+      <div class="meta">${meta}</div>
+    </div>
+    <div class="acts">${buttons(d)}</div>
+    <div class="bar ${indet ? "indet" : ""}" title="${p.toFixed(1)}%"><i style="width:${p}%"></i></div>
+    <div class="chips">${chips}</div>
+  </div>`;
+}
+function renderList() {
+  const all = state.downloads || [];
+  const shown = all.filter(d => filter === "all" || (filter === "active" ? ACTIVE.has(d.status) || d.status === "paused" : ["done","error","cancelled"].includes(d.status)));
+  $("list").innerHTML = shown.length ? shown.map(row).join("") : `<div class="empty"><b>${filter === "all" ? "Nothing queued yet" : "Nothing here"}</b>Paste a link above, or let the extension catch a download.</div>`;
+  const active = all.filter(d => ACTIVE.has(d.status));
+  $("hact").textContent = active.length;
+  $("hsp").textContent = spd(active.reduce((s, d) => s + (d.speed || 0), 0));
+  $("hdone").textContent = all.filter(d => d.status === "done").length;
+}
+$("tabs").addEventListener("click", (e) => {
+  const t = e.target.closest("[data-f]"); if (!t) return;
+  filter = t.dataset.f;
+  [...$("tabs").children].forEach(x => x.classList.toggle("on", x === t));
+  renderList();
+});
+$("list").addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-act]"); if (!btn) return;
+  const { id, act, path } = btn.dataset;
+  try {
+    if (act === "open" || act === "reveal") {
+      await api("/api/" + act, { path });
+    } else if (id) {
+      await api(`/api/download/${encodeURIComponent(id)}/${act}`, {});
+      if (act === "delete" || act === "remove") toast("Removed");
+    }
+    poll();
+  } catch (err) { toast(err.message, true); }
+});
+
+/* ---------------- add ---------------- */
+async function addUrls(text, media) {
+  const urls = String(text || "").split(/[\r\n]+/).map(s => s.trim()).filter(Boolean);
+  if (!urls.length) return toast("Paste a link first", true);
+  const dir = $("addDir").value.trim();
+  try {
+    const r = await api("/api/add", { urls, media, quality: $("quality").value, dir });
+    toast(`Queued ${r.ids.length} download${r.ids.length === 1 ? "" : "s"}`);
+    $("urls").value = "";
+    poll();
+  } catch (err) { toast(err.message, true); }
+}
+$("addBtn").onclick = () => addUrls($("urls").value, $("media").checked);
+
+/* ---------------- torrent files: picker + drag & drop ---------------- */
+function bufToB64(buf) {
+  const b = new Uint8Array(buf); let s = "";
+  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+async function addTorrentFiles(files, dir) {
+  let ok = 0;
+  for (const f of files) {
+    if (!/\.torrent$/i.test(f.name)) { toast(`${f.name}: not a .torrent file`, true); continue; }
+    try {
+      await api("/api/torrents/add", { name: f.name, data: bufToB64(await f.arrayBuffer()), dir });
+      ok++;
+    } catch (err) { toast(`${f.name}: ${err.message}`, true); }
+  }
+  if (ok) toast(ok === 1 ? "Torrent added" : `${ok} torrents added`);
+  if (ok) poll();
+}
+$("torrentBtn").onclick = () => $("torrentFile").click();
+$("torrentFile").addEventListener("change", async (e) => {
+  await addTorrentFiles([...e.target.files], $("addDir").value.trim());
+  e.target.value = "";
+});
+let dragDepth = 0;
+document.addEventListener("dragenter", (e) => {
+  const types = [...(e.dataTransfer?.types || [])];
+  if (!types.includes("Files") && !types.includes("text/plain")) return;
+  dragDepth++;
+  $("addPanel").classList.add("drop");
+});
+document.addEventListener("dragleave", () => {
+  if (--dragDepth <= 0) { dragDepth = 0; $("addPanel").classList.remove("drop"); }
+});
+document.addEventListener("dragover", (e) => e.preventDefault());
+document.addEventListener("drop", async (e) => {
+  e.preventDefault();
+  dragDepth = 0;
+  $("addPanel").classList.remove("drop");
+  const dt = e.dataTransfer;
+  if (!dt) return;
+  const files = [...(dt.files || [])];
+  const torrents = files.filter((f) => /\.torrent$/i.test(f.name));
+  if (torrents.length) {
+    await addTorrentFiles(torrents, $("addDir").value.trim());
+    return;
+  }
+  if (files.length) return toast("Only .torrent files can be dropped", true);
+  const text = (dt.getData("text/plain") || "").trim();
+  if (text && (/^magnet:/i.test(text) || /^https?:\/\/\S+\.torrent/i.test(text))) {
+    await addUrls(text, false);
+  }
+});
+$("urls").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); $("addBtn").click(); }
+});
+
+/* ---------------- extension install hint ---------------- */
+const EXT_DISMISS_KEY = "qvx-ext-hint-dismissed";
+const EXT_NAMES = { chrome: "Chrome", edge: "Edge", brave: "Brave", vivaldi: "Vivaldi", firefox: "Firefox" };
+let extBrowsers = null;
+async function renderExtHint() {
+  const seenRecently = state.extension_last_seen && Date.now() / 1000 - state.extension_last_seen < 300;
+  const dismissed = localStorage.getItem(EXT_DISMISS_KEY) === "1";
+  const show = !(seenRecently || dismissed);
+  $("exthint").hidden = !show;
+  if (!show || extBrowsers) return;
+  try {
+    extBrowsers = await api("/api/extension");
+    const names = Object.keys(extBrowsers.browsers || {});
+    $("extBtns").innerHTML = names.map(n =>
+      `<button class="btn sm primary" data-ext="${esc(n)}">Set up in ${EXT_NAMES[n] || esc(n)}</button>`).join("");
+  } catch { /* card stays with manual steps only */ }
+}
+$("extBtns").addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-ext]");
+  if (!btn) return;
+  try {
+    const r = await api("/api/extension/launch", { browser: btn.dataset.ext });
+    const label = EXT_NAMES[btn.dataset.ext] || btn.dataset.ext;
+    toast(label + " opened — Load unpacked, then Ctrl+V to paste the path");
+  } catch (err) { toast(err.message, true); }
+});
+$("extHow").onclick = () => { const st = $("extSteps"); st.hidden = !st.hidden; };
+$("extNo").onclick = () => { localStorage.setItem(EXT_DISMISS_KEY, "1"); renderExtHint(); };
+
+/* ---------------- pending banner: copied links + captured downloads ---------------- */
+function renderClip() {
+  const p = state.pending || [];
+  const host = $("clipRows");
+  if (!p.length) { $("clip").hidden = true; host.innerHTML = ""; return; }
+  $("clip").hidden = false;
+  host.innerHTML = p.map(item => {
+    const label = item.source === "intercept" ? "captured" : "copied link";
+    const what = item.name
+      ? `<b>${esc(item.name)}</b> <code title="${esc(item.url)}">${esc(item.url)}</code>`
+      : `<code title="${esc(item.url)}">${esc(item.url)}</code>`;
+    return `<div class="holdrow" data-url="${esc(item.url)}">
+      <span class="what">${label} · ${what}</span>
+      <button class="btn sm primary" data-hact="add">Download</button>
+      <button class="btn sm ghost" data-hact="dismiss">Dismiss</button>
+    </div>`;
+  }).join("");
+}
+$("clipRows").addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-hact]");
+  if (!btn) return;
+  const url = btn.closest(".holdrow")?.dataset.url;
+  if (!url) return;
+  try {
+    if (btn.dataset.hact === "add") {
+      await api("/api/clipboard", { action: "confirm", url });
+      toast("Queued"); poll();
+    } else {
+      await api("/api/clipboard", { action: "dismiss", url });
+      poll();
+    }
+  } catch (err) { toast(err.message, true); }
+});
+
+/* ---------------- settings ---------------- */
+function fieldHtml(item, value) {
+  const key = esc(item.key), val = value;
+  if (item.managed === "autostart") {
+    const on = !!(state.autostart && state.autostart.enabled);
+    const supported = !!(state.autostart && state.autostart.supported);
+    return `<div class="field bool"><div><div class="lb">${esc(item.label)}</div>
+      <div class="hp">${esc(item.help || "")}${supported ? "" : " (not supported on this OS)"}</div></div>
+      <label class="switch"><input type="checkbox" data-key="${key}" data-managed="autostart" ${on ? "checked" : ""} ${supported ? "" : "disabled"}><i></i></label></div>`;
+  }
+  const help = `<div class="hp">${esc(item.help || "")}</div>`;
+  if (item.type === "bool") {
+    return `<div class="field bool"><div><div class="lb">${esc(item.label)}</div>${help}</div>
+      <label class="switch"><input type="checkbox" data-key="${key}" ${val ? "checked" : ""}><i></i></label></div>`;
+  }
+  if (item.type === "choice") {
+    return `<div class="field"><div><div class="lb">${esc(item.label)}</div>${help}</div>
+      <select data-key="${key}">${(item.choices || []).map(c => `<option value="${esc(c)}" ${c === val ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></div>`;
+  }
+  if (item.type === "int" || item.type === "float") {
+    return `<div class="field"><div><div class="lb">${esc(item.label)}</div>${help}</div>
+      <input type="number" data-key="${key}" value="${esc(val)}" step="${item.type === "int" ? 1 : 0.1}" ${item.min != null ? `min="${item.min}"` : ""} ${item.max != null ? `max="${item.max}"` : ""}></div>`;
+  }
+  const type = item.type === "secret" ? "password" : "text";
+  return `<div class="field"><div><div class="lb">${esc(item.label)}</div>${help}</div>
+    <input type="${type}" data-key="${key}" value="${esc(val)}" ${item.max_len ? `maxlength="${item.max_len}"` : ""} autocomplete="off"></div>`;
+}
+async function openSettings() {
+  try {
+    const data = await api("/api/settings");
+    settingsSpec = data.spec;
+    const groups = {};
+    for (const item of data.spec) (groups[item.group] ||= []).push(item);
+    let html = "";
+    for (const [group, items] of Object.entries(groups)) {
+      html += `<div class="grp"><h4>${esc(group)}</h4>${items.map(i => fieldHtml(i, data.values[i.key])).join("")}</div>`;
+    }
+    const token = data.values.api_token || "";
+    html += `<div class="grp"><h4>Tools</h4>
+      <div class="rowline" style="margin-bottom:8px">
+        <button class="btn sm" type="button" data-tool="genToken">Generate extension token</button>
+        <button class="btn sm" type="button" data-tool="clearToken">Clear token</button>
+        <button class="btn sm" type="button" data-tool="copyToken">Copy token</button>
+        <span class="hint mono" id="tokenNow">${token ? esc(token) : "no token"}</span>
+      </div>
+      <div class="hint" style="margin-bottom:10px">A token is optional. When set, browser extensions must send it; the local web UI keeps working.</div>
+      <div class="rowline" style="margin-bottom:8px">
+        <button class="btn sm" type="button" data-tool="openExt">Open extension folder</button>
+        <button class="btn sm" type="button" data-tool="openDir">Open download folder</button>
+        <button class="btn sm" type="button" data-tool="log">View log</button>
+        <button class="btn sm danger" type="button" data-tool="quit">Quit Qorvex</button>
+      </div>
+      <div class="hint">Chrome/Edge/Brave: <kbd>chrome://extensions</kbd> → Developer mode → Load unpacked → <span class="mono">extension/chrome</span>.<br>
+      Firefox: <kbd>about:debugging</kbd> → This Firefox → Load Temporary Add-on → <span class="mono">extension/firefox/manifest.json</span>.</div>
+    </div>`;
+    $("settingsBody").innerHTML = html;
+    $("saveMsg").textContent = "";
+    $("settings").showModal();
+  } catch (err) { toast(err.message, true); }
+}
+$("settingsBtn").onclick = openSettings;
+$("settingsBody").addEventListener("click", async (e) => {
+  const tool = e.target.closest("[data-tool]")?.dataset.tool;
+  if (!tool) return;
+  try {
+    if (tool === "genToken") {
+      const r = await api("/api/token", { action: "new" });
+      $("tokenNow").textContent = r.token;
+      await navigator.clipboard?.writeText(r.token).catch(() => {});
+      toast("New token generated (copied)");
+    } else if (tool === "clearToken") {
+      await api("/api/token", { action: "clear" });
+      $("tokenNow").textContent = "no token";
+      toast("Token cleared");
+    } else if (tool === "copyToken") {
+      const text = $("tokenNow").textContent;
+      if (text && text !== "no token") { await navigator.clipboard.writeText(text); toast("Token copied"); }
+    } else if (tool === "openExt") {
+      await api("/api/extension/open", { browser: "chrome" });
+    } else if (tool === "openDir") {
+      await api("/api/open", { path: state.dir || state.settings.download_dir });
+    } else if (tool === "log") {
+      const r = await fetch("/api/log?lines=400"); $("logBody").textContent = await r.text(); $("logDlg").showModal();
+    } else if (tool === "quit") {
+      if (!confirm("Stop Qorvex? Active downloads pause and resume next start.")) return;
+      await api("/api/quit", {});
+      document.body.innerHTML = `<main><div class="empty"><b>Qorvex stopped</b>Close this tab. Start the app again to continue.</div></main>`;
+    }
+  } catch (err) { toast(err.message, true); }
+});
+$("saveBtn").onclick = async () => {
+  const patch = {};
+  for (const el of $("settingsBody").querySelectorAll("[data-key]")) {
+    const key = el.dataset.key;
+    if (el.dataset.managed) continue;
+    const item = settingsSpec.find(i => i.key === key);
+    patch[key] = item && item.type === "bool" ? el.checked : (item && (item.type === "int" || item.type === "float")) ? Number(el.value) : el.value;
+  }
+  try {
+    const r = await api("/api/settings", patch);
+    const bad = Object.entries(r.errors || {});
+    if (bad.length) toast(bad[0][1], true);
+    else { $("saveMsg").textContent = "Saved"; toast("Settings saved"); }
+    if ((r.changed || []).includes("port")) $("saveMsg").textContent = "Saved — restart to apply the new port";
+    applyTheme(); poll();
+  } catch (err) { toast(err.message, true); }
+};
+$("resetBtn").onclick = async () => {
+  if (!confirm("Reset every setting to its default?")) return;
+  await api("/api/settings/reset", {}).catch(err => toast(err.message, true));
+  await openSettings(); applyTheme(); poll();
+};
+$("settingsBody").addEventListener("change", async (e) => {
+  if (e.target.dataset.managed === "autostart") {
+    try {
+      const r = await api("/api/autostart", { enabled: e.target.checked });
+      toast(r.autostart.enabled ? "Starts with Windows" : "Autostart off");
+      poll();
+    } catch (err) { toast(err.message, true); }
+  }
+});
+function applyTheme() {
+  const t = (state.settings && state.settings.theme) || "auto";
+  document.documentElement.dataset.theme = t === "auto" ? "" : t;
+}
+document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => $(b.dataset.close).close());
+
+/* ---------------- misc ---------------- */
+$("openDir").onclick = () => api("/api/open", { path: state.dir || state.settings.download_dir }).catch(err => toast(err.message, true));
+
+async function poll() {
+  try {
+    state = await api("/api/state");
+    $("ver").textContent = "v" + state.version;
+    $("dot").style.background = "var(--ok)";
+    applyTheme();
+    renderNets(); renderList(); renderExtHint(); renderClip();
+  } catch (err) {
+    $("dot").style.background = "var(--bad)";
+    $("list").innerHTML = `<div class="empty"><b>Qorvex is not responding</b>${esc(err.message)}</div>`;
+  }
+}
+poll();
+setInterval(poll, 1000);
+</script>
+</body>
+</html>

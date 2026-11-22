@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Qorvex
+Comment=Multi-network download manager
+Exec=qorvex serve --no-open
+Terminal=false
+Categories=Network;FileTransfer;
+StartupNotify=false

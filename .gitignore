@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+build/
+*.spec.bak
+
+# Build outputs — ship the exe as a GitHub Release, not in the repo
+dist/
+
+# Local state
+*.log
+config.json
+
+# OS / editor
+Thumbs.db
+.DS_Store

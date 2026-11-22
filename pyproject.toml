@@ -1,0 +1,22 @@
+[project]
+name = "qorvex"
+version = "1.0.1"
+description = "Browser-integrated download manager that bonds all your internet connections"
+requires-python = ">=3.9"
+dependencies = ["psutil"]
+
+[project.optional-dependencies]
+media = ["yt-dlp"]
+torrent = ["libtorrent"]
+window = ["pywebview"]
+build = ["pyinstaller"]
+
+[project.scripts]
+qorvex = "qorvex.__main__:main"
+
+[tool.setuptools.package-data]
+qorvex = ["ui.html", "logo.png"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
