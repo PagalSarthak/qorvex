@@ -25,7 +25,7 @@ def tray_available() -> bool:
         import pystray  # noqa: F401
 
         return True
-    except ImportError:
+    except Exception:  # ImportError, and on Linux a missing X display
         return False
 
 
