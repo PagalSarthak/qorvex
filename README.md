@@ -72,11 +72,12 @@ IDM, it quietly takes over your browser downloads — Chrome, Edge, Brave, Firef
 ## Download
 
 Grab a build from [**Releases**](https://github.com/PagalSarthak/qorvex/releases) — or build it yourself
-in one command (see [Building](#building)). No installer, no Python needed to run: it's one file.
+in one command (see [Building](#building)). No Python needed to run: it's one file.
 
 | Platform | File | Notes |
 |---|---|---|
-| **Windows** | `qorvex.exe` | Double-click — opens as a desktop window (WebView2, built into Windows 10/11) |
+| **Windows (installer)** | `Qorvex-1.0.1-setup.exe` | Full setup: Start Menu + desktop shortcuts, optional start-on-login, real uninstaller in Settings → Apps |
+| **Windows (portable)** | `qorvex.exe` | Double-click — opens as a desktop window (WebView2, built into Windows 10/11) |
 | **macOS** | `Qorvex.app` | Drag into Applications. First launch: right-click → **Open** (Gatekeeper, unnotarized) |
 | **Linux** | `qorvex` | `chmod +x qorvex && ./qorvex`. Uses Qt or GTK webkit for the window; browser mode needs nothing |
 | Browser extension | **[Edge Add-ons store](https://microsoftedge.microsoft.com/addons/detail/qorvex/agpmffhlcidmmjoigmondmefoclcaecn)** · `chrome/` · `firefox/` | The app's setup card links straight to the store for Edge; other browsers get the one-click unpacked flow |
