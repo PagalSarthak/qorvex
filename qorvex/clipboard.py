@@ -119,15 +119,15 @@ class ClipboardWatcher(threading.Thread):
         self._on_url = on_url
         self._interval = max(0.2, float(interval))
         self._reader = reader
-        self._stop = threading.Event()
+        self._halt = threading.Event()
         self._seen: str | None = None
         self.last_url: str | None = None
 
     def stop(self) -> None:
-        self._stop.set()
+        self._halt.set()
 
     def run(self) -> None:
-        while not self._stop.wait(self._interval):
+        while not self._halt.wait(self._interval):
             try:
                 text = self._reader()
             except Exception:
