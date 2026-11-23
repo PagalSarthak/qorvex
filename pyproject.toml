@@ -6,7 +6,7 @@ requires-python = ">=3.9"
 dependencies = ["psutil", "pystray"]
 
 [project.optional-dependencies]
-media = ["yt-dlp"]
+media = ["yt-dlp", "bgutil-ytdlp-pot-provider"]
 torrent = ["libtorrent"]
 window = ["pywebview"]
 build = ["pyinstaller"]

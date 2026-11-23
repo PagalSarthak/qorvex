@@ -6,7 +6,7 @@
 # macOS: pyobjc is pulled in by pywebview automatically.
 set -e
 cd "$(dirname "$0")"
-python -m pip install -U pyinstaller psutil pystray "yt-dlp[default]"
+python -m pip install -U pyinstaller psutil pystray "yt-dlp[default]" bgutil-ytdlp-pot-provider
 if [ "$(uname)" = "Darwin" ]; then
     python -m pip install -U pywebview
 else
@@ -46,6 +46,8 @@ python -m PyInstaller --noconfirm --clean --onefile --windowed --name qorvex \
   --hidden-import libtorrent \
   --collect-all yt_dlp \
   --collect-all webview \
+  --collect-all pystray \
+  --collect-all yt_dlp_plugins \n  --copy-metadata bgutil-ytdlp-pot-provider \
   $FFMPEG_FLAG \
   --exclude-module tkinter \
   run.py

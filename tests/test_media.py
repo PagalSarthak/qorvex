@@ -93,9 +93,9 @@ def test_unsupported_streaming_formats(manager, httpd, monkeypatch):
             return False
 
         def extract_info(self, url, download=False):
-            return {"title": "HLS", "requested_formats": [
-                {"format_id": "hls", "url": "https://example.test/x.m3u8", "protocol": "m3u8_native",
-                 "ext": "mp4", "http_headers": {}}]}
+            fmt = {"format_id": "hls", "url": "https://example.test/x.m3u8", "protocol": "m3u8_native",
+                   "ext": "mp4", "http_headers": {}, "vcodec": "avc1", "acodec": "mp4a", "height": 720}
+            return {"title": "HLS", "requested_formats": [fmt], "formats": [fmt]}
 
     import sys
     import types
@@ -105,4 +105,36 @@ def test_unsupported_streaming_formats(manager, httpd, monkeypatch):
     monkeypatch.setitem(sys.modules, "yt_dlp", fake)
     job = manager.add_media("https://example.test/hls", "best")
     assert wait_media(job, {"error"}, timeout=30) == "error"
-    assert "streaming format" in job.error
+    # HLS is no longer rejected: the playlist fetch must fail cleanly instead
+    assert "playlist fetch failed" in job.error
+
+
+def hls_extract(port, parts=1):
+    """Resolution returns an HLS playlist URL; segments are the util server's data."""
+    def extract(page_url, net, quality, extra):
+        urls = [{"id": "v", "url": f"http://127.0.0.1:{port}/hls",
+                 "ext": "mp4", "headers": {}, "hls": True}]
+        return {"title": "HLS: Video?", "parts": urls}
+    return extract
+
+
+def test_hls_video_part_downloads_and_concats(manager, httpd, monkeypatch, tmp_path):
+    """SABR-only responses serve an HLS playlist; Qorvex fetches segments and concats."""
+    monkeypatch.setattr(media, "_extract", hls_extract(httpd, parts=1))
+
+    # stub ffmpeg: concat the segment files listed in list.txt (pure python)
+    def fake_concat(self, segments, output, ext):
+        with open(output, "wb") as out:
+            for seg in segments:
+                with open(seg, "rb") as handle:
+                    out.write(handle.read())
+    monkeypatch.setattr(media.HlsDownload, "_concat", fake_concat)
+
+    job = manager.add_media("https://example.test/watch?v=1", "720")
+    assert wait_media(job, {"done", "error"}) == "done", job.error
+    files = sorted(n for n in os.listdir(job.dir) if n.startswith("HLS_ Video_"))
+    assert files == ["HLS_ Video_.mp4"], files  # hidden parts + temp dir are gone
+    assert util.digest(os.path.join(job.dir, files[0])) == util.SHA
+    leftovers = [n for n in os.listdir(job.dir) if n.startswith(".qorvex-hls-")]
+    assert leftovers == []
+    assert [d["id"] for d in manager.state()["downloads"]] == [job.id]

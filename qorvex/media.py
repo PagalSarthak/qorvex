@@ -7,15 +7,18 @@ ffmpeg into one file.
 """
 from __future__ import annotations
 
+import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
 import threading
 import time
+import urllib.parse
 import uuid
 
-from .engine import Download, _safe
+from .engine import READ, Download, _safe, open_url
 
 
 def _ffmpeg_path() -> str | None:
@@ -64,6 +67,11 @@ def _extract(page_url, net, quality, extra):
         "skip_download": True,
         "format": _selector(quality),
     }
+    if os.environ.get("QORVEX_DEBUG"):
+        opts["verbose"] = True
+        _debug_logger = logging.getLogger("qorvex.ytdlp")
+        _debug_logger.setLevel(logging.DEBUG)
+        opts["logger"] = _debug_logger
     if net and net.ip:
         opts["source_address"] = net.ip
     if extra.get("cookies_from_browser"):
@@ -71,19 +79,47 @@ def _extract(page_url, net, quality, extra):
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(page_url, download=False)
     parts = []
-    for fmt in info.get("requested_formats") or [info]:
-        if fmt.get("protocol") not in ("https", "http") or not fmt.get("url"):
-            raise Unsupported(
-                "this video uses a streaming format (HLS/DASH); Qorvex needs a direct "
-                "http(s) stream for it"
-            )
-        parts.append(
-            {
-                "id": str(fmt.get("format_id")),
-                "url": fmt["url"],
-                "ext": fmt.get("ext") or "bin",
-                "headers": fmt.get("http_headers") or {},
-            }
+    all_formats = info.get("formats") or []
+    selected = info.get("requested_formats") or [info]
+
+    # Prefer HLS (combined audio+video) whenever it matches the requested
+    # quality: its segment URLs are the one thing YouTube's SABR gating does
+    # not 403-flip, so downloads stay reliable. Fall back to direct https
+    # parts when no HLS format covers the selected quality.
+    video = next((f for f in selected if f.get("vcodec") not in (None, "none")), None)
+    audio = next((f for f in selected if f.get("vcodec") in (None, "none") and f.get("acodec") != "none"), None)
+    hls_best = None
+    if video:
+        candidates = [
+            f for f in all_formats
+            if str(f.get("protocol") or "").startswith("m3u8")
+            and f.get("vcodec") not in (None, "none")
+            and f.get("acodec") not in (None, "none")  # combined: includes audio
+            and int(f.get("height") or 0) >= int(video.get("height") or 0)
+        ]
+        if candidates:
+            hls_best = max(candidates, key=lambda f: int(f.get("height") or 0))
+
+    def _part(fmt, hls=False):
+        return {
+            "id": str(fmt.get("format_id")),
+            "url": fmt["url"],
+            "ext": fmt.get("ext") or ("mp4" if hls else "bin"),
+            "headers": fmt.get("http_headers") or {},
+            "hls": hls,
+        }
+
+    if hls_best:
+        parts.append(_part(hls_best, hls=True))
+    elif video and audio:
+        parts.append(_part(video))
+        parts.append(_part(audio))
+    elif video or audio:
+        parts.append(_part(video or audio))
+    else:
+        raise Unsupported(
+            "this video uses a streaming format (HLS/DASH) whose playlist could "
+            "not be resolved"
         )
     return {
         "title": info.get("title") or info.get("id") or "video",
@@ -98,6 +134,169 @@ def _unique(path: str) -> str:
         path = f"{base} ({index}){ext}"
         index += 1
     return path
+
+
+class HlsDownload(Download):
+    """Fallback for YouTube's SABR-only responses: the resolved "url" is an HLS
+    playlist. Fetch the segments sequentially, then concatenate with ffmpeg.
+    Bonding does not apply (segments are short-lived URLs), but the download works."""
+
+    def __init__(self, mgr, url, headers, name="", directory=None, category=None):
+        super().__init__(mgr, url, headers, name, directory, category)
+        self.temp_dir = None
+
+    def _cleanup_temp(self):
+        temp, self.temp_dir = self.temp_dir, None
+        if temp:
+            shutil.rmtree(temp, ignore_errors=True)
+
+    def _read_url(self, net, url):
+        conn = None
+        try:
+            conn, r, final = open_url(
+                url, net,
+                {**self.headers, "Accept": "*/*", "Accept-Encoding": "identity"},
+                verify=self._verify(),
+            )
+            if r.status != 200:
+                raise OSError(f"HTTP {r.status}")
+            return r.read().decode("utf-8", "replace"), final
+        finally:
+            if conn is not None:
+                try:
+                    conn.close()
+                except OSError:
+                    pass
+
+    def _unique_target(self):
+        os.makedirs(self.dir, exist_ok=True)
+        self.name = _safe(self.name)
+        path = os.path.join(self.dir, self.name)
+        base, ext = os.path.splitext(path)
+        index = 1
+        while os.path.exists(path):
+            path = f"{base} ({index}){ext}"
+            index += 1
+        return path
+
+    def _concat(self, segments, output, ext):
+        ffmpeg = _ffmpeg_path()
+        if not ffmpeg:
+            raise OSError("ffmpeg not found (needed for HLS)")
+        listfile = os.path.join(self.temp_dir, "list.txt")
+        with open(listfile, "w", encoding="utf-8") as handle:
+            for seg in segments:
+                handle.write("file '" + seg.replace("'", "'\\''") + "'\n")
+        args = [ffmpeg, "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", listfile]
+        if ext == "ts":  # transport streams need a real remux into mp4
+            args += ["-c", "copy", "-movflags", "+faststart"]
+        else:
+            args += ["-c", "copy"]
+        args += [output]
+        process = subprocess.run(args, capture_output=True, text=True)
+        if process.returncode:
+            raise OSError("concat failed: " + process.stderr.strip()[-160:])
+
+    def _run_inner(self):
+        nets = [n for n in self.mgr.usable() if self.allowed(n)]
+        if not nets:
+            return self._fail("no network enabled")
+        net = nets[0]
+        self._cleanup_temp()
+
+        # master playlist -> best variant -> media playlist
+        url, base, playlist, last = self.url_for(net), None, None, None
+        for _ in range(3):
+            if self.stop or self.cancel:
+                return
+            try:
+                playlist, base = self._read_url(net, url)
+            except Exception as exc:  # noqa: BLE001
+                last = exc
+                time.sleep(1.2)
+                continue
+            if "#EXT-X-STREAM-INF" not in playlist:
+                break
+            best, bandwidth = None, -1
+            for match in re.finditer(r"#EXT-X-STREAM-INF[^\r\n]*[\r\n]+([^\r\n#][^\r\n]*)", playlist):
+                found = re.search(r"BANDWIDTH=(\d+)", match.group(0))
+                rate = int(found.group(1)) if found else 0
+                if rate > bandwidth:
+                    bandwidth, best = rate, match.group(1).strip()
+            if not best:
+                return self._fail("empty HLS playlist")
+            url = urllib.parse.urljoin(base, best)
+        if not playlist or "#EXTINF" not in playlist:
+            return self._fail(f"playlist fetch failed: {last}")
+        if "#EXT-X-KEY" in playlist:
+            return self._fail("encrypted HLS stream; no decoder for it")
+        segments = [
+            urllib.parse.urljoin(base, line.strip())
+            for line in playlist.splitlines()
+            if line.strip() and not line.strip().startswith("#")
+        ]
+        if not segments:
+            return self._fail("empty HLS playlist")
+
+        output = self._unique_target()
+        ext = os.path.splitext(output)[1].lstrip(".") or "mp4"
+        self.status = "downloading"
+        self.size = None
+        self.temp_dir = os.path.join(self.dir, f".qorvex-hls-{self.id}")
+        os.makedirs(self.temp_dir, exist_ok=True)
+        saved = []
+        try:
+            for index, segment in enumerate(segments):
+                data = None
+                for attempt in range(6):
+                    if self.stop or self.cancel:
+                        return
+                    conn = None
+                    try:
+                        conn, r, _ = open_url(
+                            segment, None,
+                            {**self.headers, "Accept": "*/*", "Accept-Encoding": "identity"},
+                            verify=self._verify(),
+                        )
+                        if r.status != 200:
+                            raise OSError(f"HTTP {r.status}")
+                        buffer = []
+                        while True:
+                            if self.stop or self.cancel:
+                                return
+                            chunk = r.read(READ)
+                            if not chunk:
+                                break
+                            buffer.append(chunk)
+                        data = b"".join(buffer)
+                        break
+                    except Exception as exc:  # noqa: BLE001 - retry the segment
+                        last = exc
+                        time.sleep(min(8.0, 1.0 * (attempt + 1)))
+                    finally:
+                        if conn is not None:
+                            try:
+                                conn.close()
+                            except OSError:
+                                pass
+                if data is None:
+                    return self._fail(f"segment {index} failed: {last}")
+                out = os.path.join(self.temp_dir, f"{index:06d}.seg")
+                with open(out, "wb") as handle:
+                    handle.write(data)
+                self._account(net, len(data))
+                saved.append(out)
+            if self.cancel:
+                self.status = "cancelled"
+                return
+            self._concat(saved, output, ext)
+            self.path = output
+            self.name = os.path.basename(output)
+            self.size = os.path.getsize(output)
+            self.done = self.size
+            self.status = "done"
+        finally:
+            self._cleanup_temp()
 
 
 class MediaJob:
@@ -193,7 +392,8 @@ class MediaJob:
                 if item["id"] == part["id"]
             }
             filename = f"{self.name}.part{index}.{part['ext']}" if many else f"{self.name}.{part['ext']}"
-            download = Download(
+            cls = HlsDownload if part.get("hls") else Download
+            download = cls(
                 self.mgr,
                 part["url"],
                 {"User-Agent": self.mgr.setting("user_agent", ""), "Accept": "*/*", **part["headers"],

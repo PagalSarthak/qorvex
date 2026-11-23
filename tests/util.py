@@ -11,6 +11,7 @@ from qorvex.config import Settings
 from qorvex.engine import Manager, Network
 
 SIZE = 12 * 1024 * 1024
+HLS_SEG = 512 * 1024
 DATA = os.urandom(SIZE)
 SHA = hashlib.sha256(DATA).hexdigest()
 
@@ -55,6 +56,26 @@ class Handler(BaseHTTPRequestHandler):
             wanted = dict(part.split("=", 1) for part in query.split("&") if "=" in part).get("ip")
             if wanted != self.client_address[0]:
                 return self._status(403)
+        if path == "/hls":
+            # a small HLS media playlist: segments covering exactly DATA
+            count = len(DATA) // HLS_SEG
+            body = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n"
+            body += "".join(f"#EXTINF:10.0,\n/seg/{i}\n" for i in range(count))
+            body += "#EXT-X-ENDLIST\n"
+            self.send_response(200)
+            self.send_header("Content-Type", "application/vnd.apple.mpegurl")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body.encode())
+            return
+        if path.startswith("/seg/"):
+            index = int(path.rsplit("/", 1)[1])
+            seg = DATA[index * HLS_SEG:(index + 1) * HLS_SEG]
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(seg)))
+            self.end_headers()
+            self.wfile.write(seg)
+            return
         if path == "/fail" and now < STATE.fail_until:
             return self._status(500)
         if path == "/failranges" and now < STATE.fail_until and rng != "bytes=0-0":

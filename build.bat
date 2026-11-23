@@ -2,7 +2,7 @@
 setlocal
 cd /d "%~dp0"
 echo [1/3] dependencies
-python -m pip install -U pyinstaller psutil pywebview pystray "yt-dlp[default]" libtorrent || goto :err
+python -m pip install -U pyinstaller psutil pywebview pystray "yt-dlp[default]" bgutil-ytdlp-pot-provider libtorrent || goto :err
 echo [2/4] extension
 python tools\build_extension.py || goto :err
 echo [3/4] ffmpeg + deno (bundled into the exe)
@@ -27,6 +27,8 @@ python -m PyInstaller --noconfirm --clean --onefile --windowed --name qorvex --i
   --collect-all yt_dlp ^
   --collect-all webview ^
   --collect-all pystray ^
+  --collect-all yt_dlp_plugins ^
+  --copy-metadata bgutil-ytdlp-pot-provider ^
   --collect-all pythonnet ^
   --collect-all clr_loader ^
   %FFMPEG_FLAG% ^
