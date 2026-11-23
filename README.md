@@ -20,6 +20,7 @@ then downloads each file over **all of your internet connections simultaneously*
 
 ---
 
+<video src="docs/demo.mp4" controls muted loop width="100%" poster="docs/screenshot.png"></video>
 <img src="docs/screenshot.png" width="100%" alt="The Qorvex dashboard: live per-network speeds, add bar, download list">
 
 ## Why
