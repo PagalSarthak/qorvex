@@ -31,7 +31,8 @@ def wait_media(job, statuses, timeout=60):
 
 @pytest.fixture(autouse=True)
 def no_ffmpeg(monkeypatch):
-    monkeypatch.setattr(media.shutil, "which", lambda name: None)
+    """Keep the suite hermetic: CI runs tests before the ffmpeg bundle step."""
+    monkeypatch.setattr(media, "_ffmpeg_path", lambda: None)
 
 
 def test_two_parts_use_each_networks_own_url(manager, httpd, monkeypatch):

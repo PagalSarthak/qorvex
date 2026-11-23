@@ -81,7 +81,8 @@ in one command (see [Building](#building)). No installer, no Python needed to ru
 | **Linux** | `qorvex` | `chmod +x qorvex && ./qorvex`. Uses Qt or GTK webkit for the window; browser mode needs nothing |
 | Browser extension | `chrome/` · `firefox/` | One-click setup card inside the app: it opens the right page and copies the folder path for you |
 
-`ffmpeg` isn't bundled — install it if you want YouTube video+audio merged into one file (otherwise both parts are kept).
+**ffmpeg is bundled** in every build — YouTube video+audio merge into one file out of the box.
+Override with the `QORVEX_FFMPEG` environment variable if you want a different binary.
 
 ## Run from source
 
@@ -143,7 +144,7 @@ qorvex nets | log [-n N] | open | extension | settings | autostart on|off|status
 Players like YouTube use `blob:` streams, so the extension sends the **page URL** to Qorvex, which
 resolves it with **yt-dlp**. Those direct links are usually locked to the requesting IP, so Qorvex
 resolves **once per network** and each network downloads with its own link. Video and audio arrive
-as two parts and are merged with **ffmpeg** (install it; otherwise both parts are kept). A JS
+as two parts and are merged with **ffmpeg** (bundled in every build). A JS
 runtime (Deno is recommended) is needed for modern YouTube. Streaming-only formats (HLS/DASH
 playlists) are rejected up front with a clear error instead of failing late.
 
@@ -202,6 +203,8 @@ tests use a fake libtorrent session, so they run offline.
 - YouTube resolution depends on yt-dlp, a JS runtime and your cookies; the offline suite uses a
   fake resolver.
 - IPv4 and `http(s)` only. No HLS/DASH muxing, no proxy support.
+- If the ffmpeg download is unavailable at build time, the app still builds and falls back to a
+  system ffmpeg (`PATH` or the `QORVEX_FFMPEG` variable).
 - Torrents bond on outgoing connections; incoming peers arrive on one listen port, and torrent
   jobs aren't persisted across restarts (finished files are).
 - The Linux desktop window needs Qt (`pywebview[qt]`, installed by `build.sh`) or GTK webkit; the

@@ -16,3 +16,6 @@ config.json
 # OS / editor
 Thumbs.db
 .DS_Store
+
+# downloaded ffmpeg (bundled at build time, never committed)
+build_cache/

@@ -10,11 +10,34 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 import threading
 import time
 import uuid
 
 from .engine import Download, _safe
+
+
+def _ffmpeg_path() -> str | None:
+    """Bundled ffmpeg first (frozen builds / build_cache), then PATH, then env override."""
+    env = os.environ.get("QORVEX_FFMPEG")
+    if env and os.path.isfile(env):
+        return env
+    exe = "ffmpeg.exe" if os.name == "nt" else "ffmpeg"
+    roots = []
+    bundled = getattr(sys, "_MEIPASS", None)
+    if bundled:
+        roots.append(bundled)                     # PyInstaller onefile/onedir bundle
+    if getattr(sys, "frozen", False) and sys.executable:
+        roots.append(os.path.dirname(os.path.abspath(sys.executable)))
+    project = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    roots.append(project)                         # source checkouts: repo root
+    roots.append(os.path.join(project, "build_cache"))  # downloaded by build scripts
+    for root in roots:
+        candidate = os.path.join(root, exe)
+        if os.path.isfile(candidate):
+            return candidate
+    return shutil.which("ffmpeg")
 
 
 class Unsupported(Exception):
@@ -217,7 +240,7 @@ class MediaJob:
         with self._lock:
             parts = list(self.parts)
         if len(parts) > 1:
-            ffmpeg = shutil.which("ffmpeg")
+            ffmpeg = _ffmpeg_path()
             if not ffmpeg:
                 # Keep both files and finish: the user still gets the media.
                 self.stage = "done"
