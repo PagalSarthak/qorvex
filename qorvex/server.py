@@ -382,6 +382,10 @@ def make_handler(app: App, port: int):
                 target = os.path.join(extension_dir(), str(body.get("browser") or "chrome"))
                 return self._json({"ok": open_path(target)})
 
+            if path == "/api/show":
+                app.show_requested.set()
+                return self._json({"ok": True})
+
             if path == "/api/quit":
                 app.quit()
                 return self._json({"ok": True})

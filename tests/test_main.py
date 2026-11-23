@@ -20,9 +20,22 @@ class FakeWebview:
     def module(self) -> types.ModuleType:
         mod = types.ModuleType("webview")
 
+        class _Event:
+            def __init__(self) -> None:
+                self._handlers: list = []
+
+            def __iadd__(self, fn):
+                self._handlers.append(fn)
+                return self
+
         def create_window(title, url, **kwargs):  # noqa: ANN001, ANN003
             self.created = {"title": title, "url": url, **kwargs}
-            return types.SimpleNamespace(destroy=lambda: None)
+            return types.SimpleNamespace(
+                destroy=lambda: None,
+                show=lambda: None,
+                hide=lambda: None,
+                events=types.SimpleNamespace(closing=_Event()),
+            )
 
         mod.create_window = create_window
         mod.start = lambda **kwargs: None  # returns immediately, like a closed window

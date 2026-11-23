@@ -61,6 +61,7 @@ class App:
         )
         self.started = time.time()
         self._ext_last_seen: float | None = None
+        self.show_requested = threading.Event()
         self._lock = threading.Lock()
         self._pending: deque[dict] = deque(maxlen=MAX_PENDING)
         self.watcher = NullWatcher()

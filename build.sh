@@ -6,7 +6,7 @@
 # macOS: pyobjc is pulled in by pywebview automatically.
 set -e
 cd "$(dirname "$0")"
-python -m pip install -U pyinstaller psutil "yt-dlp[default]"
+python -m pip install -U pyinstaller psutil pystray "yt-dlp[default]"
 if [ "$(uname)" = "Darwin" ]; then
     python -m pip install -U pywebview
 else

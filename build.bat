@@ -2,7 +2,7 @@
 setlocal
 cd /d "%~dp0"
 echo [1/3] dependencies
-python -m pip install -U pyinstaller psutil pywebview "yt-dlp[default]" libtorrent || goto :err
+python -m pip install -U pyinstaller psutil pywebview pystray "yt-dlp[default]" libtorrent || goto :err
 echo [2/3] extension
 python tools\build_extension.py || goto :err
 echo [3/3] executable
@@ -14,6 +14,7 @@ python -m PyInstaller --noconfirm --clean --onefile --windowed --name qorvex --i
   --hidden-import libtorrent ^
   --collect-all yt_dlp ^
   --collect-all webview ^
+  --collect-all pystray ^
   --collect-all pythonnet ^
   --collect-all clr_loader ^
   --exclude-module tkinter ^

@@ -3,7 +3,7 @@ name = "qorvex"
 version = "1.0.1"
 description = "Browser-integrated download manager that bonds all your internet connections"
 requires-python = ">=3.9"
-dependencies = ["psutil"]
+dependencies = ["psutil", "pystray"]
 
 [project.optional-dependencies]
 media = ["yt-dlp"]

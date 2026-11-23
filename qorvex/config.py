@@ -81,6 +81,22 @@ SETTINGS_SPEC: tuple[dict[str, Any], ...] = (
         help="How many downloads run at once. Each one can use several connections.",
     ),
     dict(
+        key="close_to_tray",
+        type="bool",
+        default=True,
+        group="General",
+        label="Keep running in the tray when the window is closed",
+        help="Closing the window hides it; downloads continue. Reopen by clicking the exe or the tray icon. Turn off to quit on close.",
+    ),
+    dict(
+        key="notify_complete",
+        type="bool",
+        default=True,
+        group="General",
+        label="Notify when a download finishes",
+        help="Shows a system notification for completed and failed downloads.",
+    ),
+    dict(
         key="port",
         type="int",
         default=6805,

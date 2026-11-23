@@ -151,8 +151,13 @@ def main(argv: list[str] | None = None) -> int:
 
     port = int(args.port or settings.get("port", 6805))
     if _port_open(port):
-        # already running: the desktop window (or the first instance's tab) is
-        # already up — launching again must never open another browser tab
+        # already running: if the first instance is minimized to the tray, bring
+        # its window back instead of doing nothing (or opening another tab)
+        if not args.no_open:
+            try:
+                _request(port, "/api/show", {}, token=settings.get("api_token", ""))
+            except (urllib.error.URLError, OSError):
+                pass
         return 0
 
     app = App(
@@ -162,6 +167,10 @@ def main(argv: list[str] | None = None) -> int:
         max_active=args.max_active,
     )
     app.mgr.ytdlp["cookies_from_browser"] = args.cookies_from_browser
+
+    from .tray import TrayController, tray_available
+
+    tray = TrayController(app)
 
     server = serve(app, port)
     url = f"http://127.0.0.1:{port}/"
@@ -194,6 +203,36 @@ def main(argv: list[str] | None = None) -> int:
             "Qorvex", url, width=1180, height=820, min_size=(860, 540),
         )
 
+        def show_window():
+            try:
+                window.show()
+            except Exception:
+                pass
+
+        tray.show_window = show_window
+        if tray_available() and (
+            settings.get("close_to_tray", True) or settings.get("notify_complete", True)
+        ):
+            tray.start()
+
+            def show_watcher():
+                """Re-launching the exe un-hides a tray-minimized window."""
+                while not app.quitting:
+                    if app.show_requested.wait(0.5):
+                        app.show_requested.clear()
+                        show_window()
+
+            threading.Thread(target=show_watcher, daemon=True, name="qorvex-show").start()
+
+        def on_closing():
+            """Close-to-tray: hide instead of quitting (unless disabled/quitting)."""
+            if settings.get("close_to_tray", True) and not app.quitting:
+                window.hide()
+                tray.notify("Qorvex is still running", "Downloads continue in the tray.")
+                return False  # cancel the close
+
+        window.events.closing += on_closing
+
         def quit_watcher():
             """UI “Quit Qorvex” must also close the window."""
             while not app.quitting:
@@ -212,12 +251,18 @@ def main(argv: list[str] | None = None) -> int:
                 open_url(url)
             serve_loop()
         finally:
+            tray.stop()
             app.quit()
         worker.join(timeout=5)
     else:
         if not args.no_open and settings.get("open_ui_on_start", True):
             open_url(url)
-        serve_loop()
+        if tray_available() and settings.get("notify_complete", True):
+            tray.start()
+        try:
+            serve_loop()
+        finally:
+            tray.stop()
 
     server.server_close()
     app.close()
