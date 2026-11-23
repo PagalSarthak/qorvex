@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://pagalsarthak.github.io/qorvex/sitemap.xml
