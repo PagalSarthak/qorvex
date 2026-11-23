@@ -25,7 +25,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from . import __version__, autostart
 from .app import App, tail_log
 from .config import app_dir
-from .system import copy_clipboard, find_browsers, open_path, reveal_path
+from .system import copy_clipboard, find_browsers, open_path, open_url, reveal_path
 
 UI = os.path.join(os.path.dirname(__file__), "ui.html")
 LOGO = os.path.join(os.path.dirname(__file__), "logo.png")
@@ -33,6 +33,12 @@ MAX_BODY = 1 << 20
 MAX_TORRENT_BODY = 32 << 20   # .torrent uploads (drag & drop); libtorrent caps metadata at ~30 MB
 ACTIONS = {"pause", "resume", "retry", "cancel", "remove", "delete"}
 MEDIA_PAGE_RE = re.compile(r"youtu|vimeo|dailymotion|twitch\.tv/videos", re.I)
+
+# Official store listings for the browser extension; shown as one-click
+# "Add to <browser>" buttons instead of the manual unpacked flow.
+EXTENSION_STORE_URLS = {
+    "edge": "https://microsoftedge.microsoft.com/addons/detail/qorvex/agpmffhlcidmmjoigmondmefoclcaecn",
+}
 
 
 def extension_dir() -> str:
@@ -206,6 +212,7 @@ def make_handler(app: App, port: int):
                         "firefox": os.path.join(extension_dir(), "firefox"),
                         "exists": os.path.isdir(extension_dir()),
                         "browsers": find_browsers(),
+                        "store": EXTENSION_STORE_URLS,
                     }
                 )
             if path == "/api/extension/open":
@@ -359,6 +366,13 @@ def make_handler(app: App, port: int):
 
             if path == "/api/reveal":
                 return self._json({"ok": _open_known(app, str(body.get("path") or ""), reveal=True)})
+
+            if path == "/api/extension/store":
+                url = EXTENSION_STORE_URLS.get(str(body.get("browser") or ""))
+                if not url:
+                    return self._error("no store listing for that browser yet")
+                open_url(url)
+                return self._json({"ok": True, "url": url})
 
             if path == "/api/extension/launch":
                 """One-click setup: open the browser at its extension page with

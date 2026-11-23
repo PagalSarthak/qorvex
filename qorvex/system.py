@@ -155,6 +155,18 @@ def set_app_id() -> None:
         pass
 
 
+def create_mutex():
+    """Named mutex so installers (Inno Setup) can detect a running Qorvex."""
+    if not sys.platform.startswith("win"):
+        return
+    try:
+        import ctypes
+
+        ctypes.windll.kernel32.CreateMutexW(None, False, "QorvexRunningMutex")
+    except Exception:
+        pass
+
+
 def prepend_path(*dirs: str) -> None:
     """Make bundled helpers (ffmpeg, deno) visible to child processes like yt-dlp."""
     here = [d for d in dirs if d and os.path.isdir(d)]

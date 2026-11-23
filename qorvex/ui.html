@@ -607,6 +607,7 @@ $("urls").addEventListener("keydown", (e) => {
 /* ---------------- extension install hint ---------------- */
 const EXT_DISMISS_KEY = "qvx-ext-hint-dismissed";
 const EXT_NAMES = { chrome: "Chrome", edge: "Edge", brave: "Brave", vivaldi: "Vivaldi", firefox: "Firefox" };
+const STORE_NAMES = { edge: "Edge", firefox: "Firefox", chrome: "Chrome" };
 let extBrowsers = null;
 async function renderExtHint() {
   const seenRecently = state.extension_last_seen && Date.now() / 1000 - state.extension_last_seen < 300;
@@ -616,18 +617,27 @@ async function renderExtHint() {
   if (!show || extBrowsers) return;
   try {
     extBrowsers = await api("/api/extension");
+    const store = extBrowsers.store || {};
     const names = Object.keys(extBrowsers.browsers || {});
-    $("extBtns").innerHTML = names.map(n =>
-      `<button class="btn sm primary" data-ext="${esc(n)}">Set up in ${EXT_NAMES[n] || esc(n)}</button>`).join("");
+    const storeBtns = Object.keys(store).map(n =>
+      `<button class="btn sm primary" data-store="${esc(n)}">Add to ${STORE_NAMES[n] || esc(n)}</button>`).join("");
+    const manualBtns = names.filter(n => !store[n]).map(n =>
+      `<button class="btn sm" data-ext="${esc(n)}">Set up in ${EXT_NAMES[n] || esc(n)}</button>`).join("");
+    $("extBtns").innerHTML = storeBtns + manualBtns;
   } catch { /* card stays with manual steps only */ }
 }
 $("extBtns").addEventListener("click", async (e) => {
-  const btn = e.target.closest("[data-ext]");
+  const btn = e.target.closest("[data-ext],[data-store]");
   if (!btn) return;
   try {
-    const r = await api("/api/extension/launch", { browser: btn.dataset.ext });
-    const label = EXT_NAMES[btn.dataset.ext] || btn.dataset.ext;
-    toast(label + " opened — Load unpacked, then Ctrl+V to paste the path");
+    if (btn.dataset.store) {
+      const r = await api("/api/extension/store", { browser: btn.dataset.store });
+      toast("Store page opened in your browser");
+    } else {
+      const r = await api("/api/extension/launch", { browser: btn.dataset.ext });
+      const label = EXT_NAMES[btn.dataset.ext] || btn.dataset.ext;
+      toast(label + " opened — Load unpacked, then Ctrl+V to paste the path");
+    }
   } catch (err) { toast(err.message, true); }
 });
 $("extHow").onclick = () => { const st = $("extSteps"); st.hidden = !st.hidden; };
