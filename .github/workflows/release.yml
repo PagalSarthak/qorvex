@@ -50,26 +50,21 @@ jobs:
             tar -xf build_cache/ffmpeg.tar.xz
             cp ffmpeg-master-latest-linux64-gpl/bin/ffmpeg build_cache/ffmpeg
           fi
-          ARGS=""
+          # one --add-binary arg per line; read with mapfile in the build step
+          # so no shell ever parses the semicolons/colons in these arguments
+          : > build_cache/extra_args.txt
           if [ "$RUNNER_OS" = "Windows" ]; then
-            [ -f build_cache/ffmpeg.exe ] && ARGS="$ARGS --add-binary build_cache/ffmpeg.exe;."
-            [ -f build_cache/deno.exe ] && ARGS="$ARGS --add-binary build_cache/deno.exe;."
+            [ -f build_cache/ffmpeg.exe ] && printf '%s\n' "--add-binary=build_cache/ffmpeg.exe;." >> build_cache/extra_args.txt
+            [ -f build_cache/deno.exe ] && printf '%s\n' "--add-binary=build_cache/deno.exe;." >> build_cache/extra_args.txt
           else
-            [ -f build_cache/ffmpeg ] && ARGS="$ARGS --add-binary build_cache/ffmpeg:."
-            [ -f build_cache/deno ] && ARGS="$ARGS --add-binary build_cache/deno:."
+            [ -f build_cache/ffmpeg ] && printf '%s\n' "--add-binary=build_cache/ffmpeg:." >> build_cache/extra_args.txt
+            [ -f build_cache/deno ] && printf '%s\n' "--add-binary=build_cache/deno:." >> build_cache/extra_args.txt
           fi
-          echo "PY_BUNDLE_ARGS=$ARGS" >> "$GITHUB_ENV"
       - name: Build executable
-        run: >
-          pyinstaller --clean --name qorvex ${{ matrix.extra }}
-          --add-data "qorvex/ui.html${{ matrix.sep }}qorvex"
-          --add-data "qorvex/logo.png${{ matrix.sep }}qorvex"
-          --add-data "extension${{ matrix.sep }}extension"
-          --hidden-import psutil --hidden-import libtorrent --collect-all yt_dlp
-          --collect-all webview --collect-all pystray --collect-all yt_dlp_plugins
-          --copy-metadata bgutil-ytdlp-pot-provider
-          ${{ env.PY_BUNDLE_ARGS }}
-          --exclude-module tkinter --noconfirm run.py
+        shell: bash
+        run: |
+          mapfile -t BUNDLE_ARGS < build_cache/extra_args.txt
+          pyinstaller --clean --name qorvex ${{ matrix.extra }}             --add-data "qorvex/ui.html${{ matrix.sep }}qorvex"             --add-data "qorvex/logo.png${{ matrix.sep }}qorvex"             --add-data "extension${{ matrix.sep }}extension"             --hidden-import psutil --hidden-import libtorrent --collect-all yt_dlp             --collect-all webview --collect-all pystray --collect-all yt_dlp_plugins             --copy-metadata bgutil-ytdlp-pot-provider             "${BUNDLE_ARGS[@]}"             --exclude-module tkinter --noconfirm run.py
       - name: Package (zip the binary with a versioned name)
         shell: bash
         run: |
