@@ -9,7 +9,7 @@
 A download manager that grabs links and videos straight from your browser —
 then downloads each file over **all of your internet connections simultaneously**.
 
-[![Tests](https://img.shields.io/badge/tests-72%20passing-brightgreen)](https://github.com/sarthakt674/qorvex/actions)
+[![Tests](https://img.shields.io/badge/tests-72%20passing-brightgreen)](https://github.com/PagalSarthak/qorvex/actions)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blueviolet)](#download)
 [![License: MIT](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB)](https://www.python.org)
@@ -71,7 +71,7 @@ IDM, it quietly takes over your browser downloads — Chrome, Edge, Brave, Firef
 
 ## Download
 
-Grab a build from [**Releases**](https://github.com/sarthakt674/qorvex/releases) — or build it yourself
+Grab a build from [**Releases**](https://github.com/PagalSarthak/qorvex/releases) — or build it yourself
 in one command (see [Building](#building)). No installer, no Python needed to run: it's one file.
 
 | Platform | File | Notes |
