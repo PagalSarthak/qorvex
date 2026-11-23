@@ -172,6 +172,10 @@ class App:
                 log.exception("could not change autostart: %s", exc)
         if "clipboard_watch" in changed or "clipboard_auto_add" in changed:
             self._start_watcher()
+        if not changed or "video_cookies_browser" in changed:
+            browser = str(settings.get("video_cookies_browser", "") or "")
+            mgr.ytdlp["cookies_from_browser"] = browser or None
+            log.info("video cookies from browser: %s", browser or "none")
 
     def update_settings(self, patch: dict) -> dict:
         result = self.settings.update(patch)

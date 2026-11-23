@@ -2,7 +2,7 @@
 from PyInstaller.utils.hooks import collect_all
 
 datas = [('qorvex/ui.html', 'qorvex'), ('qorvex/logo.png', 'qorvex'), ('extension', 'extension')]
-binaries = [('build_cache/ffmpeg.exe', '.')]
+binaries = [('build_cache/ffmpeg.exe', '.'), ('build_cache/deno.exe', '.')]
 hiddenimports = ['psutil', 'libtorrent']
 tmp_ret = collect_all('yt_dlp')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]

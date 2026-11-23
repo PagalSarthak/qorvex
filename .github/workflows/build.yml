@@ -24,10 +24,18 @@ jobs:
         run: python -m pytest -q
       - name: Build browser extension
         run: python tools/build_extension.py
-      - name: Bundle ffmpeg
+      - name: Bundle ffmpeg + deno
         shell: bash
         run: |
           mkdir -p build_cache
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            DENO_URL="https://github.com/denoland/deno/releases/latest/download/deno-aarch64-apple-darwin.zip"
+          else
+            DENO_URL="https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip"
+          fi
+          curl -fL -o build_cache/deno.zip "$DENO_URL" || echo "deno download failed"
+          unzip -o -q build_cache/deno.zip && cp deno build_cache/deno || true
+          rm -f deno
           if [ "$RUNNER_OS" = "macOS" ]; then
             brew install ffmpeg || echo "brew ffmpeg failed: building without bundled ffmpeg"
             cp "$(brew --prefix ffmpeg)/bin/ffmpeg" build_cache/ffmpeg 2>/dev/null || true
@@ -40,12 +48,17 @@ jobs:
             tar -xf build_cache/ffmpeg.tar.xz
             cp ffmpeg-master-latest-linux64-gpl/bin/ffmpeg build_cache/ffmpeg
           fi
-          # expose the PyInstaller flag only when the binary actually landed
-          if [ "$RUNNER_OS" = "Windows" ] && [ -f build_cache/ffmpeg.exe ]; then
-            echo "FFMPEG_ARG=--add-binary build_cache/ffmpeg.exe;." >> "$GITHUB_ENV"
-          elif [ "$RUNNER_OS" != "Windows" ] && [ -f build_cache/ffmpeg ]; then
-            echo "FFMPEG_ARG=--add-binary build_cache/ffmpeg:." >> "$GITHUB_ENV"
+          # expose the PyInstaller flags only for helpers that actually landed
+          ARGS=""
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            [ -f build_cache/ffmpeg.exe ] && ARGS="$ARGS --add-binary build_cache/ffmpeg.exe;."
+            [ -f build_cache/deno.exe ] && ARGS="$ARGS --add-binary build_cache/deno.exe;."
+          else
+            [ -f build_cache/ffmpeg ] && ARGS="$ARGS --add-binary build_cache/ffmpeg:."
+            [ -f build_cache/deno ] && ARGS="$ARGS --add-binary build_cache/deno:."
           fi
+          echo "PY_BUNDLE_ARGS=$ARGS" >> "$GITHUB_ENV"
+          echo "bundled: $ARGS"
       - name: Build executable
         run: >
           pyinstaller --clean --name qorvex ${{ matrix.extra }}
@@ -54,7 +67,7 @@ jobs:
           --add-data "extension${{ matrix.sep }}extension"
           --hidden-import psutil --hidden-import libtorrent --collect-all yt_dlp
           --collect-all webview --collect-all pystray
-          ${{ env.FFMPEG_ARG }}
+          ${{ env.PY_BUNDLE_ARGS }}
           --exclude-module tkinter --noconfirm run.py
       - uses: actions/upload-artifact@v4
         with: { name: "${{ matrix.name }}", path: "${{ matrix.bin }}" }

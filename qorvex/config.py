@@ -245,6 +245,15 @@ SETTINGS_SPEC: tuple[dict[str, Any], ...] = (
         restart=True,
         help="Incoming peer connections arrive here. Change needs a restart.",
     ),
+    dict(
+        key="video_cookies_browser",
+        type="choice",
+        default="",
+        choices=["", "firefox", "chrome", "edge", "brave", "chromium", "opera", "vivaldi", "safari"],
+        group="Engine",
+        label="Video cookies from browser",
+        help="Use the logged-in cookies of this browser to resolve video pages — fixes YouTube “Sign in to confirm you're not a bot”. Pick the browser where you are signed in to YouTube.",
+    ),
     # ---- Browser -----------------------------------------------------------
     dict(
         key="intercept",

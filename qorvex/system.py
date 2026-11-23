@@ -153,3 +153,12 @@ def set_app_id() -> None:
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Qorvex.DownloadManager.1")
     except Exception:
         pass
+
+
+def prepend_path(*dirs: str) -> None:
+    """Make bundled helpers (ffmpeg, deno) visible to child processes like yt-dlp."""
+    here = [d for d in dirs if d and os.path.isdir(d)]
+    if not here:
+        return
+    current = os.environ.get("PATH", "")
+    os.environ["PATH"] = os.pathsep.join(here) + os.pathsep + current

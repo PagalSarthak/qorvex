@@ -20,7 +20,7 @@ from .app import App, tail_log
 from .config import Settings, ensure_app_dir
 from .engine import detect_networks
 from .server import extension_dir, serve
-from .system import hide_console, open_path, open_url, set_app_id
+from .system import hide_console, open_path, open_url, prepend_path, set_app_id
 
 COMMANDS = {"serve", "add", "nets", "log", "open", "extension", "settings", "autostart"}
 
@@ -145,6 +145,14 @@ def main(argv: list[str] | None = None) -> int:
     # ---- serve -----------------------------------------------------------
     ensure_app_dir()
     set_app_id()
+    # bundled helpers first on PATH so yt-dlp finds its JS runtime (deno)
+    _bundled = getattr(sys, "_MEIPASS", None)
+    _frozen_dir = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else ""
+    prepend_path(
+        _bundled,
+        _frozen_dir,
+        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "build_cache"),
+    )
     frozen = bool(getattr(sys, "frozen", False))
     if frozen and not args.console:
         hide_console()
