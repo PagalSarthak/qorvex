@@ -144,8 +144,11 @@ qorvex nets | log [-n N] | open | extension | settings | autostart on|off|status
 Players like YouTube use `blob:` streams, so the extension sends the **page URL** to Qorvex, which
 resolves it with **yt-dlp**. Those direct links are usually locked to the requesting IP, so Qorvex
 resolves **once per network** and each network downloads with its own link. Video and audio arrive
-as two parts and are merged with **ffmpeg** (bundled in every build). A JS
-runtime (Deno is recommended) is needed for modern YouTube. Streaming-only formats (HLS/DASH
+as two parts and are merged with **ffmpeg** (bundled in every build). The **Deno JavaScript
+runtime is bundled too** — yt-dlp needs it to solve YouTube's bot challenges, so there is no
+extra setup. If YouTube still says *"Sign in to confirm you're not a bot"*, set
+Settings → Engine → **Video cookies from browser** to the browser you are signed in with.
+Streaming-only formats (HLS/DASH
 playlists) are rejected up front with a clear error instead of failing late.
 
 ### Torrents
