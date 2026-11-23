@@ -20,7 +20,8 @@ then downloads each file over **all of your internet connections simultaneously*
 
 ---
 
-<video src="docs/demo.mp4" controls muted loop width="100%" poster="docs/screenshot.png"></video>
+**▶ [Watch the 30-second demo](https://github.com/PagalSarthak/qorvex/releases/download/v1.0.1/Qorvex-demo.mp4)** (mp4, 3.4 MB)
+
 <img src="docs/screenshot.png" width="100%" alt="The Qorvex dashboard: live per-network speeds, add bar, download list">
 
 ## Why
