@@ -285,8 +285,12 @@ def _filename(resp, url):
     cd = resp.getheader("Content-Disposition") or ""
     m = re.search(r"filename\*=(?:UTF-8|utf-8)''([^;]+)", cd) or re.search(r'filename="?([^";]+)"?', cd)
     if m:
-        return _safe(urllib.parse.unquote(m.group(1)))
-    return _safe(urllib.parse.unquote(os.path.basename(urllib.parse.urlsplit(url).path)))
+        raw = urllib.parse.unquote(m.group(1))
+    else:
+        raw = urllib.parse.unquote(urllib.parse.urlsplit(url).path)
+    # servers sometimes leak a full path into the name; keep the basename only
+    raw = raw.replace("\\", "/").rsplit("/", 1)[-1]
+    return _safe(raw)
 
 
 def probe(url, net, headers, verify=True):
@@ -498,17 +502,38 @@ class Download:
         nets = [n for n in self.mgr.usable() if self.allowed(n)]
         if not nets:
             return self._fail("no network enabled")
+        # probe every network in parallel: a slow server must not multiply by
+        # the number of networks (20s timeout each, sequentially = minutes)
         info, last = None, None
         for _ in range(4):  # a 429 during the probe is temporary, not a dead network
+            if self.stop:
+                break
+            results = {}
+            threads = []
             for n in nets:
-                try:
-                    info = probe(self.url_for(n), n, self.headers, verify=self._verify())
+                def _probe_net(n=n):
+                    try:
+                        results[n.name] = probe(self.url_for(n), n, self.headers, verify=self._verify())
+                    except RateLimited as e:
+                        results[n.name] = e
+                        self.cooldown_until = max(self.cooldown_until, time.monotonic() + e.delay)
+                    except Exception as e:  # noqa: BLE001
+                        results[n.name] = e
+                t = threading.Thread(target=_probe_net, daemon=True)
+                t.start()
+                threads.append(t)
+            deadline = time.monotonic() + 25
+            while any(t.is_alive() for t in threads) and time.monotonic() < deadline and not self.stop:
+                time.sleep(0.1)
+            for n in nets:
+                r = results.get(n.name)
+                if isinstance(r, RateLimited):
+                    last = r
+                elif isinstance(r, Exception):
+                    last = r
+                elif r is not None:
+                    info = r
                     break
-                except RateLimited as e:
-                    last = e
-                    self.cooldown_until = max(self.cooldown_until, time.monotonic() + e.delay)
-                except Exception as e:  # noqa: BLE001
-                    last = e
             if info or self.stop:
                 break
             if not isinstance(last, RateLimited):
@@ -543,8 +568,12 @@ class Download:
                 chunk_max = int(self._cfg("chunk_max_mb", 8)) * MiB
                 cs = min(chunk_max, max(chunk_min, self.size // (streams * 6)))
                 self.pending = deque(Chunk(s, min(s + cs, self.size) - 1) for s in range(0, self.size, cs))
-            os.ftruncate(self.fd, self.size)
+        # leave "starting" before the (potentially slow) file allocation so the
+        # UI stops showing a frozen state; workers only spawn below, after the
+        # truncate has completed, so no chunk can write before it is done
         self.status = "downloading"
+        if not resumed:
+            os.ftruncate(self.fd, self.size)
         workers, last_save = {}, 0.0
         no_networks = False
         while not self.stop and not self.fatal:

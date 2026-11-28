@@ -38,6 +38,7 @@ MEDIA_PAGE_RE = re.compile(r"youtu|vimeo|dailymotion|twitch\.tv/videos", re.I)
 # "Add to <browser>" buttons instead of the manual unpacked flow.
 EXTENSION_STORE_URLS = {
     "edge": "https://microsoftedge.microsoft.com/addons/detail/qorvex/agpmffhlcidmmjoigmondmefoclcaecn",
+    "firefox": "https://addons.mozilla.org/en-US/firefox/addon/qorvex/",
 }
 
 

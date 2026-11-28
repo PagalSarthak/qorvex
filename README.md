@@ -82,7 +82,7 @@ in one command (see [Building](#building)). No Python needed to run: it's one fi
 | **Windows (portable)** | `qorvex.exe` | Double-click — opens as a desktop window (WebView2, built into Windows 10/11) |
 | **macOS** | `Qorvex.app` | Drag into Applications. First launch: right-click → **Open** (Gatekeeper, unnotarized) |
 | **Linux** | `qorvex` | `chmod +x qorvex && ./qorvex`. Uses Qt or GTK webkit for the window; browser mode needs nothing |
-| Browser extension | **[Edge Add-ons store](https://microsoftedge.microsoft.com/addons/detail/qorvex/agpmffhlcidmmjoigmondmefoclcaecn)** · `chrome/` · `firefox/` | The app's setup card links straight to the store for Edge; other browsers get the one-click unpacked flow |
+| Browser extension | **[Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/qorvex/agpmffhlcidmmjoigmondmefoclcaecn)** · **[Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/qorvex/)** · `chrome/` | The app's setup card links straight to the stores; other browsers get the one-click unpacked flow |
 
 **ffmpeg is bundled** in every build — YouTube video+audio merge into one file out of the box.
 Override with the `QORVEX_FFMPEG` environment variable if you want a different binary.
