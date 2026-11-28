@@ -97,6 +97,14 @@ SETTINGS_SPEC: tuple[dict[str, Any], ...] = (
         help="Shows a system notification for completed and failed downloads.",
     ),
     dict(
+        key="check_updates",
+        type="bool",
+        default=True,
+        group="General",
+        label="Check for Qorvex updates",
+        help="Compare against the latest GitHub release twice a day and notify when a newer version is out. No data is sent.",
+    ),
+    dict(
         key="port",
         type="int",
         default=6805,

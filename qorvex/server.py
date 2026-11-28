@@ -368,6 +368,9 @@ def make_handler(app: App, port: int):
             if path == "/api/reveal":
                 return self._json({"ok": _open_known(app, str(body.get("path") or ""), reveal=True)})
 
+            if path == "/api/update/check":
+                return self._json({"ok": True, "update": app.check_updates_now()})
+
             if path == "/api/extension/store":
                 url = EXTENSION_STORE_URLS.get(str(body.get("browser") or ""))
                 if not url:

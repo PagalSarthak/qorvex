@@ -180,6 +180,7 @@ def main(argv: list[str] | None = None) -> int:
     from .tray import TrayController, tray_available
 
     tray = TrayController(app)
+    app.tray = tray
 
     server = serve(app, port)
     url = f"http://127.0.0.1:{port}/"
@@ -220,7 +221,9 @@ def main(argv: list[str] | None = None) -> int:
 
         tray.show_window = show_window
         if tray_available() and (
-            settings.get("close_to_tray", True) or settings.get("notify_complete", True)
+            settings.get("close_to_tray", True)
+            or settings.get("notify_complete", True)
+            or settings.get("check_updates", True)
         ):
             tray.start()
 

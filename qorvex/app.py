@@ -17,6 +17,7 @@ from .clipboard import ClipboardWatcher, NullWatcher
 from .config import Settings, ensure_app_dir, log_path
 from .engine import Manager
 from .torrent import is_torrent_source
+from .updates import UpdateWatcher
 
 log = logging.getLogger("qorvex")
 
@@ -65,9 +66,11 @@ class App:
         self._lock = threading.Lock()
         self._pending: deque[dict] = deque(maxlen=MAX_PENDING)
         self.watcher = NullWatcher()
+        self.updates = UpdateWatcher(self, on_found=self._notify_update)
         self._quit = threading.Event()
         self.apply_settings([])
         self._start_watcher()
+        self.updates.start()
         try:
             autostart.sync()
         except Exception:  # noqa: BLE001 - autostart is best-effort
@@ -172,6 +175,14 @@ class App:
                 log.exception("could not change autostart: %s", exc)
         if "clipboard_watch" in changed or "clipboard_auto_add" in changed:
             self._start_watcher()
+        if "check_updates" in changed:
+            if self.settings.get("check_updates", True):
+                if not self.updates.is_alive():
+                    self.updates = UpdateWatcher(self, on_found=self._notify_update)
+                    self.updates.start()
+            else:
+                self.updates.stop()
+                self.updates.found = None
         if not changed or "video_cookies_browser" in changed:
             browser = str(settings.get("video_cookies_browser", "") or "")
             mgr.ytdlp["cookies_from_browser"] = browser or None
@@ -225,6 +236,20 @@ class App:
         """The browser extension announces itself with a marker header."""
         self._ext_last_seen = time.time()
 
+    def _notify_update(self, version: str, url: str) -> None:
+        log.info("update available: %s (running %s)", version, self.state().get("version"))
+        tray = getattr(self, "tray", None)
+        try:
+            if tray is not None:
+                tray.notify("Qorvex update available", f"Version {version} is out — open the app to get it.")
+        except Exception:  # noqa: BLE001 - tray may not exist on this platform
+            pass
+
+    def check_updates_now(self) -> dict | None:
+        """Immediate check (UI button); the watcher caches the result."""
+        self.updates.check_now()
+        return self.updates.state()
+
     def state(self) -> dict:
         data = self.mgr.state()
         values = self.settings.values()
@@ -238,6 +263,7 @@ class App:
                 "app_dir": ensure_app_dir(),
                 "started": self.started,
                 "extension_last_seen": self._ext_last_seen,
+                "update": self.updates.state(),
             }
         )
         return data
