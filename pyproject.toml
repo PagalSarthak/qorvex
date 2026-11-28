@@ -1,6 +1,6 @@
 [project]
 name = "qorvex"
-version = "1.0.1"
+version = "1.0.2"
 description = "Browser-integrated download manager that bonds all your internet connections"
 requires-python = ">=3.9"
 dependencies = ["psutil", "pystray"]
