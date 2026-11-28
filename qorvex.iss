@@ -1,7 +1,7 @@
 ; Qorvex installer - user-mode install, no admin rights needed.
 
 #define MyAppName "Qorvex"
-#define MyAppVersion "1.0.1"
+#define MyAppVersion "1.0.2"
 #define MyAppPublisher "PagalSarthak"
 #define MyAppExeName "qorvex.exe"
 
