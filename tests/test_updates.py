@@ -35,21 +35,23 @@ def test_watcher_reports_newer_version():
     app = type("AppStub", (), {})()
     seen = []
     watcher = updates.UpdateWatcher(app, on_found=lambda v, u: seen.append((v, u)))
-    with mock.patch.object(updates, "latest_release", return_value=("v1.0.2", "u")):
+    # a version far beyond the running one, whatever it is
+    with mock.patch.object(updates, "latest_release", return_value=("v9.9.9", "u")):
         watcher._check_once()
-    assert seen == [("v1.0.2", "u")]
-    assert watcher.state() == {"version": "v1.0.2", "url": "u", "current": updates.qorvex.__version__}
+    assert seen == [("v9.9.9", "u")]
+    assert watcher.state() == {"version": "v9.9.9", "url": "u", "current": updates.qorvex.__version__}
 
     # a second pass with the same result must not re-notify
-    with mock.patch.object(updates, "latest_release", return_value=("v1.0.2", "u")):
+    with mock.patch.object(updates, "latest_release", return_value=("v9.9.9", "u")):
         watcher._check_once()
-    assert seen == [("v1.0.2", "u")]
+    assert seen == [("v9.9.9", "u")]
 
 
 def test_watcher_silent_when_no_update():
     app = type("AppStub", (), {})()
     seen = []
     watcher = updates.UpdateWatcher(app, on_found=lambda v, u: seen.append((v, u)))
-    with mock.patch.object(updates, "latest_release", return_value=("v1.0.1", "u")):
+    # an ancient release is never "newer", regardless of the running version
+    with mock.patch.object(updates, "latest_release", return_value=("v0.0.1", "u")):
         watcher._check_once()
     assert seen == [] and watcher.state() is None
